@@ -58,6 +58,8 @@ bool Tokenizer::next() {
     int endIndex = -1;
     bool found = false;
     bool inProcess = true;
+    int startLine = line;
+    int startColumn = column;
 
     while(!(found && !inProcess)){
         if(index >= (int)source.size()){
@@ -90,6 +92,8 @@ bool Tokenizer::next() {
                         data.token.file = file;
                     }
                     data.matchCounter++;
+                }else{
+                    data.matchCounter = 0;
                 }
 
                 if(data.matchCounter >= (int)data.token.value.size()) {
@@ -113,6 +117,17 @@ bool Tokenizer::next() {
 
     if(endIndex != -1){
         index = endIndex;
+        line = startLine;
+        column = startColumn;
+
+        for(int i = startIndex;i < index;i++){
+            char c = source[i];
+            column++;
+            if(c == '\n'){
+                line++;
+                column = 0;
+            }
+        }
     }
 
     for(auto &data : types) {
@@ -133,7 +148,7 @@ bool inAnyRange(char c, const std::string &str){
     if(str.size() % 2 == 1){
         return false;
     }
-    for(int i = 0; i < str.size();i += 2){
+    for(int i = 0; i < (int)str.size();i += 2){
         if(inRange(c,str[i], str[i+1])){
             return true;
         }
@@ -143,7 +158,7 @@ bool inAnyRange(char c, const std::string &str){
 
 bool isMatch(const std::string &str, const std::string &range1, const std::string &range2){
     bool is = true;
-    for(int i = 0; i < str.size();i++) {
+    for(int i = 0; i < (int)str.size();i++) {
         char c = str[i];
         if(i == 0){
             if(!inAnyRange(c, range1)){
