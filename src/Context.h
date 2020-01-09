@@ -18,6 +18,10 @@ public:
     std::string mods;
 };
 
+class Expresion{
+public:
+};
+
 class Context {
 public:
     std::string name;

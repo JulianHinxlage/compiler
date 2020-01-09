@@ -53,10 +53,8 @@ int main(int argc, char *argv[]){
     Parser parser;
     parser.parse(tokenizer);
 
-    util::logInfo("time: ", clock.elapsed());
-    util::logInfo("\n\n\n");
-
     printContext(parser.globalContext);
+    util::logInfo("time: ", clock.elapsed());
 
     return 0;
 }

@@ -12,13 +12,19 @@ return 0;
 int main(int argc, char **argv){
     int a = 0;
     return 0;
+
+    {
+        int abc = 0;
+    }
+
 }
 
 float foo(int x){
     int a = x + y;
+    return a;
 }
 
 int f(){
     int z = 0;
+    return z;
 }
-

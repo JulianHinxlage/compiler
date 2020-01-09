@@ -16,7 +16,6 @@ bool Parser::step() {
             if(token.type == "undef"){
                 util::logWarning("unknown symbol \"", token.value, "\" at ", token.line, ":", token.column);
             }else{
-                util::logInfo(token.type, ":", token.value,":", token.line,":", token.column);
                 return true;
             }
         }
@@ -54,12 +53,10 @@ bool Parser::statement() {
                             v.name = name;
                             return true;
                         }else{
-                            util::logWarning("expected expresion at ", token.line, ";", token.column);
+                            util::logWarning("expected expresion at ", token.line, ":", token.column);
                         }
                     }
                     else if(token.value == "("){
-
-
                         auto newContext = context->contexts.add(std::make_shared<Context>());
                         newContext->parentContext = context;
                         context = newContext;
@@ -75,13 +72,14 @@ bool Parser::statement() {
                             if(token.value == ")"){
                                 break;
                             }else if(token.value != ","){
-                                util::logWarning("expected , or ) at ", token.line, ";", token.column);
+                                util::logWarning("expected , or ) at ", token.line, ":", token.column);
                                 return false;
                             }
                             if(!step()){
                                 return false;
                             }
                         }
+                        step();
 
                         if(function()){
                             if(context->parentContext != nullptr){
@@ -92,6 +90,19 @@ bool Parser::statement() {
                     }
                 }
             }
+        }
+    }
+    else if(token.value == "{"){
+        auto newContext = context->contexts.add(std::make_shared<Context>());
+        newContext->parentContext = context;
+        context = newContext;
+        context->type = Context::BLOCK;
+
+        if(function()){
+            if(context->parentContext != nullptr){
+                context = context->parentContext;
+            }
+            return true;
         }
     }
     else{
@@ -164,24 +175,22 @@ bool Parser::expresion() {
 }
 
 bool Parser::function() {
-    if(step()) {
-        if (token.value == "{") {
-            if(!step()){
-                return false;
-            }
-            while (token.value != "}") {
-                if(!statement()){
-                    if(!step()){
-                        return false;
-                    }
+    if (token.value == "{") {
+        if(!step()){
+            return false;
+        }
+        while (token.value != "}") {
+            if(!statement()){
+                if(!step()){
+                    return false;
                 }
             }
-            if(!step()){
-                return false;
-            }
-        } else {
-            util::logWarning("expected { at ", token.line, ";", token.column);
         }
+        if(!step()){
+            return false;
+        }
+    } else {
+        util::logWarning("expected { at ", token.line, ":", token.column);
     }
     return true;
 }
