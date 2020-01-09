@@ -1,0 +1,8 @@
+/*
+    code to test compiler
+*/
+int a = 0;
+float b = 3.14;
+int c = 4 * b + a;
+string d = "Hello, World";
+float e = 0.0;
