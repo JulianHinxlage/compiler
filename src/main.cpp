@@ -16,6 +16,13 @@ std::string indent(int x){
     return str;
 }
 
+void printExpression(Expression &expression, int offset = 0){
+    util::logInfo(indent(offset), expression.token.value);
+    for(auto &e : expression.expressions){
+        printExpression(e, offset + 1);
+    }
+}
+
 void printContext(std::shared_ptr<Context> &context, int offset = 0){
     if(context->type == Context::BLOCK){
         util::logInfo(indent(offset), "{");
@@ -36,6 +43,10 @@ void printContext(std::shared_ptr<Context> &context, int offset = 0){
 
     for(auto &c : context->contexts){
         printContext(c, offset);
+    }
+
+    for(auto &e : context->expressions){
+        printExpression(e, offset);
     }
 
     offset--;

@@ -98,6 +98,25 @@ bool Parser::check(const std::string &pattern) {
     return true;
 }
 
+bool Parser::checkAny(const std::string &symbols) {
+    if (!next()) {
+        return false;
+    }
+    for (auto &i : util::split(symbols)) {
+        if (tokenizer->isType(i)) {
+            if (token.type == i) {
+                return true;
+            }
+        } else {
+            if (token.value == i) {
+                return true;
+            }
+        }
+    }
+    prev();
+    return false;
+}
+
 Token Parser::get(int offset) {
     if(tokenIndex >= offset){
         return tokens[tokenIndex - offset];
@@ -136,7 +155,7 @@ void Parser::contextStepUp() {
 }
 
 bool Parser::statement() {
-    if(check("type ide")) {
+    if(check("type ide") || check("ide ide")) {
         if (check(";")) {
             Variable &v = context->variables.add();
             v.name = get(1).value;
@@ -147,7 +166,10 @@ bool Parser::statement() {
             Variable &v = context->variables.add();
             v.name = get(1).value;
             v.type = get(2).value;
-            expresion();
+
+            Expression &e = context->expressions.add(Expression(Expression::OPERATOR, get(0)));
+            e.expressions.add(Expression(Expression::VAR, get(1)));
+            expression(e.expressions, ";");
             return true;
         }
         if (check("(")) {
@@ -159,19 +181,23 @@ bool Parser::statement() {
         }
     }
     if(check("{")){
+        Expression &e = context->expressions.add();
         contextStepDown(Context::BLOCK);
+        e.type = Expression::BLOCK;
+        e.context = context;
         prev();
         return block();
     }
-    return false;
+    return expression(context->expressions, ";");
 }
 
 bool Parser::parameter() {
-    if(check("type ide")) {
+    if(check("type ide") || check("ide ide")) {
         Variable &v = context->parameter.add();
         v.name = get(0).value;
         v.type = get(1).value;
         if (check("=")) {
+            //TODO default parameter
             if(until(", )")){
                 prev();
             }
@@ -181,14 +207,59 @@ bool Parser::parameter() {
     return false;
 }
 
-bool Parser::expresion() {
-    return until(";");
+bool Parser::expression(util::ArrayList<Expression> &expressions, const std::string &endSymbols, bool consumeEndSymbol) {
+    if(checkAny("num hex bin float str char ide")){
+        if(checkAny(endSymbols)){
+            Expression &e = expressions.add(Expression(Expression::CONST, get(1)));
+            if(get(1).type == "ide"){
+                e.type = Expression::VAR;
+            }
+            if(!consumeEndSymbol){
+                prev();
+            }
+            return true;
+        }else if(checkAny("op lop")){
+            Expression &e = expressions.add(Expression(Expression::OPERATOR, get(0)));
+            e.expressions.add(Expression(Expression::CONST, get(1)));
+            if(expression(e.expressions, endSymbols, consumeEndSymbol)){
+                return true;
+            }
+            prev();
+        }else if(check("aop")){
+            Expression &e = expressions.add(Expression(Expression::OPERATOR, get(0)));
+            e.expressions.add(Expression(Expression::CONST, get(1)));
+            if(expression(e.expressions, endSymbols, consumeEndSymbol)){
+                return true;
+            }
+            prev();
+        }
+        else if(check("(")){
+            Expression &e = expressions.add(Expression(Expression::CALL, get(1)));
+            while(expression(e.expressions, ", )")){}
+            return true;
+        }
+        prev();
+    }else if(check("(")){
+        if(expression(expressions, ") ;")){
+            //TODO multiple brackets
+            if(token.value != ")"){
+                prev();
+                util::logWarning("expected \")\" at ", token.line, ":", token.column + token.value.size());
+                next();
+                return false;
+            }
+            return true;
+        }
+        prev();
+    }
+    return false;
 }
 
 bool Parser::block() {
     if(!check("{")){
-        util::logWarning("expected \"{\" at ", token.line, ":", token.column);
+        util::logWarning("expected \"{\" at ", token.line, ":", token.column + token.value.size());
         contextStepUp();
+        prev();//TODO next after failed statement
         return false;
     }
 
@@ -208,19 +279,19 @@ bool Parser::block() {
 }
 
 bool Parser::function() {
-    while(check("(") || check(",")){
+    while(checkAny(", (")){
         if(check(")")){
             prev();
             break;
         }
         if(!parameter()){
-            util::logWarning("error at ", token.line, ":", token.column);
+            util::logWarning("expected \")\" at ", token.line, ":", token.column + token.value.size());
             contextStepUp();
             return false;
         }
     }
     if(!check(")")){
-        util::logWarning("expected \")\" at ", token.line, ":", token.column);
+        util::logWarning("expected \")\" at ", token.line, ":", token.column + token.value.size());
         contextStepUp();
         return false;
     }

@@ -18,11 +18,12 @@ private:
 
     bool statement();
     bool parameter();
-    bool expresion();
+    bool expression(util::ArrayList<Expression> &expressions, const std::string &endSymbols = ";", bool consumeEndSymbol = true);
     bool function();
     bool block();
 
     bool check(const std::string &pattern);
+    bool checkAny(const std::string &symbols);
     bool until(const std::string &symbols);
     Token get(int offset);
     void contextStepDown(Context::Type type);

@@ -77,6 +77,8 @@ bool Tokenizer::next() {
             if(!found){
                 token.type = "undef";
                 token.value = source.substr(startIndex, startIndex - index);
+                token.line = startLine;
+                token.column = startColumn + 1;
                 endIndex = index;
                 found = index > startIndex;
             }
@@ -115,6 +117,8 @@ bool Tokenizer::next() {
                     }else if(!found){
                         token.type = "undef";
                         token.value = source.substr(startIndex, data.startIndex - startIndex);
+                        token.line = startLine;
+                        token.column = startColumn + 1;
                         endIndex = data.startIndex;
                     }
                     found = true;

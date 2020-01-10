@@ -6,6 +6,7 @@
 #define COMPILER_KONTEXT_H
 
 #include "util/ArrayList.h"
+#include "Token.h"
 #include <string>
 #include <memory>
 
@@ -18,8 +19,33 @@ public:
     std::string mods;
 };
 
-class Expresion{
+class Expression{
 public:
+    Token token;
+    util::ArrayList<Expression> expressions;
+    std::shared_ptr<Context> context = nullptr;
+
+    enum Type{
+        NONE = 0,
+        CONST = 1,
+        VAR = 2,
+        UNARY_OPERATOR = 3,
+        OPERATOR = 4,
+        BLOCK = 5,
+        CALL = 6,
+        OBJ_CALL = 7
+    };
+
+    Type type;
+
+    Expression(){
+        type = NONE;
+    }
+
+    Expression(Type type, const Token &token){
+        this->type = type;
+        this->token = token;
+    }
 };
 
 class Context {
@@ -31,6 +57,7 @@ public:
     util::ArrayList<Variable> variables;
     util::ArrayList<std::shared_ptr<Context>> contexts;
     std::shared_ptr<Context> parentContext = nullptr;
+    util::ArrayList<Expression> expressions;
 
     enum Type{
         NONE = 0,
