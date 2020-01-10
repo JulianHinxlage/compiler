@@ -40,12 +40,28 @@ void Tokenizer::setToken(const std::string &type, const util::ArrayList<std::str
 void Tokenizer::setDefault() {
     setToken("type", util::split("void char short int long float double"));
     setToken("key", util::split("if else for while return break continue true false"));
-    setToken("op", util::split("+ - * / % | & ^ ~ || && ^^ !"));
-    setToken("aop", util::split("= += -= *= /= %= |= &= ^= ~= ||= &&= ^^="));
+    setToken("op", util::split("+ - * / % | & ^ ~ || && ^^ ! >> <<"));
+    setToken("aop", util::split("= += -= *= /= %= |= &= ^= ~= ||= &&= ^^= >>= <<="));
     setToken("lop", util::split("> < => <= == !="));
+    setToken("uop", util::split("-- ++"));
     setToken("com", util::split("// /* */"));
     setToken("pun", util::split(". , ( ) [ ] { } ; : ' \""));
     setToken("sep", util::split(" ,\t,\n", ","));
+
+    setPrecedence(util::split("++ --"),1);
+    setPrecedence(util::split("! ~"),2);
+    setPrecedence(util::split("* / %"),3);
+    setPrecedence(util::split("+ -"),4);
+    setPrecedence(util::split(">> <<"),5);
+    setPrecedence(util::split("< > <= =>"),6);
+    setPrecedence(util::split("== !="),7);
+    setPrecedence(util::split("&"),8);
+    setPrecedence(util::split("^"),9);
+    setPrecedence(util::split("|"),10);
+    setPrecedence(util::split("&&"),11);
+    setPrecedence(util::split("^^"),12);
+    setPrecedence(util::split("||"),13);
+    setPrecedence(util::split("= += -= *= /= %= >>= <<= &= ^= |= ||= &&= ^^="),14);
 }
 
 Token Tokenizer::get() {
@@ -62,6 +78,25 @@ bool Tokenizer::isType(const std::string &type) {
         }
     }
     return false;
+}
+
+void Tokenizer::setPrecedence(const std::string &value, int precedence) {
+    precedences.add({value,precedence});
+}
+
+void Tokenizer::setPrecedence(const util::ArrayList<std::string> &values, int precedence) {
+    for(auto &value : values){
+        setPrecedence(value,precedence);
+    }
+}
+
+int Tokenizer::getPrecedence(const std::string &value) {
+    for(auto &i : precedences){
+        if(i.first == value){
+            return  i.second;
+        }
+    }
+    return -1;
 }
 
 bool Tokenizer::next() {

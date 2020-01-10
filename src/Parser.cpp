@@ -5,12 +5,39 @@
 #include "Parser.h"
 #include "util/log.h"
 #include "util/strutil.h"
+#include "util/math.h"
 
 Parser::Parser() {
     tokenizer = nullptr;
     tokenIndex = -1;
     context = nullptr;
     globalContext = nullptr;
+}
+
+std::shared_ptr<Context> Parser::parse(Tokenizer &tokenizer) {
+    this->tokenizer = &tokenizer;
+    tokens.clear();
+    tokenIndex = -1;
+
+    globalContext = std::make_shared<Context>();
+    globalContext->type = Context::BLOCK;
+    context = globalContext;
+
+    while(true){
+        if(!statement()){
+            if(!next()){
+                break;
+            }
+        }
+    }
+
+    auto ret = globalContext;
+    context = nullptr;
+    globalContext = nullptr;
+    this->tokenizer = nullptr;
+    tokens.clear();
+    tokenIndex = -1;
+    return ret;
 }
 
 bool Parser::next() {
@@ -43,32 +70,6 @@ bool Parser::prev(){
         return true;
     }
     return false;
-}
-
-std::shared_ptr<Context> Parser::parse(Tokenizer &tokenizer) {
-    this->tokenizer = &tokenizer;
-    tokens.clear();
-    tokenIndex = -1;
-
-    globalContext = std::make_shared<Context>();
-    globalContext->type = Context::BLOCK;
-    context = globalContext;
-
-    while(true){
-        if(!statement()){
-            if(!next()){
-                break;
-            }
-        }
-    }
-
-    auto ret = globalContext;
-    context = nullptr;
-    globalContext = nullptr;
-    this->tokenizer = nullptr;
-    tokens.clear();
-    tokenIndex = -1;
-    return ret;
 }
 
 bool Parser::check(const std::string &pattern) {
@@ -169,7 +170,12 @@ bool Parser::statement() {
 
             Expression &e = context->expressions.add(Expression(Expression::OPERATOR, get(0)));
             e.expressions.add(Expression(Expression::VAR, get(1)));
-            expression(e.expressions, ";");
+
+            Expression e2;
+            if(expression(e2, ";")){
+                e.expressions.add(e2);
+                return true;
+            }
             return true;
         }
         if (check("(")) {
@@ -188,7 +194,12 @@ bool Parser::statement() {
         prev();
         return block();
     }
-    return expression(context->expressions, ";");
+    Expression e;
+    if(expression(e, ";")){
+        context->expressions.add(e);
+        return true;
+    }
+    return false;
 }
 
 bool Parser::parameter() {
@@ -207,52 +218,101 @@ bool Parser::parameter() {
     return false;
 }
 
-bool Parser::expression(util::ArrayList<Expression> &expressions, const std::string &endSymbols, bool consumeEndSymbol) {
-    if(checkAny("num hex bin float str char ide")){
-        if(checkAny(endSymbols)){
-            Expression &e = expressions.add(Expression(Expression::CONST, get(1)));
-            if(get(1).type == "ide"){
-                e.type = Expression::VAR;
-            }
-            if(!consumeEndSymbol){
-                prev();
-            }
-            return true;
-        }else if(checkAny("op lop")){
-            Expression &e = expressions.add(Expression(Expression::OPERATOR, get(0)));
-            e.expressions.add(Expression(Expression::CONST, get(1)));
-            if(expression(e.expressions, endSymbols, consumeEndSymbol)){
-                return true;
-            }
-            prev();
-        }else if(check("aop")){
-            Expression &e = expressions.add(Expression(Expression::OPERATOR, get(0)));
-            e.expressions.add(Expression(Expression::CONST, get(1)));
-            if(expression(e.expressions, endSymbols, consumeEndSymbol)){
-                return true;
-            }
-            prev();
-        }
-        else if(check("(")){
-            Expression &e = expressions.add(Expression(Expression::CALL, get(1)));
-            while(expression(e.expressions, ", )")){}
-            return true;
-        }
-        prev();
-    }else if(check("(")){
-        if(expression(expressions, ") ;")){
-            //TODO multiple brackets
-            if(token.value != ")"){
-                prev();
-                util::logWarning("expected \")\" at ", token.line, ":", token.column + token.value.size());
-                next();
-                return false;
+bool Parser::factor(Expression &e){
+    if(checkAny("num hex bin float str char")) {
+        e = Expression(Expression::CONST, get(0));
+        return true;
+    }else if(check("ide")){
+        if(check("(")){
+            e = Expression(Expression::CALL, get(1));
+            while(true){
+                Expression e2;
+                if(!expression(e2, ", )")){
+                    break;
+                }
+                e.expressions.add(e2);
             }
             return true;
         }
-        prev();
+        e = Expression(Expression::VAR, get(0));
+        return true;
     }
     return false;
+}
+
+bool Parser::expression(Expression &e, const std::string &endSymbols) {
+    if(check("(")){
+        Expression e3;
+        e.token = get(0);
+        if(expression(e3, ")")){
+            e.type = Expression::OPERATOR;
+            e.expressions.add(e3);
+        }
+    }
+
+    if(e.token.value.empty()){
+        if(!factor(e)){
+            return false;
+        }
+    }
+
+    if(checkAny(endSymbols)){
+        return true;
+    }
+
+    if(checkAny("op lop aop")){
+        Expression op = Expression(Expression::OPERATOR, get(0));
+        Expression e2;
+
+        if(!factor(e2)){
+            if(check("(")) {
+                Expression e3;
+                e2.token = get(0);
+                e2.type = Expression::OPERATOR;
+                expression(e3, ")");
+                e2.expressions.add(e3);
+            }
+        }
+
+        op.expressions.add(e);
+        op.expressions.add(e2);
+        expression(op, endSymbols);
+        precedenceParsing(op);
+        e = op;
+        return true;
+    }
+
+    return false;
+}
+
+bool Parser::precedenceParsing(Expression &op){
+    int p1 = tokenizer->getPrecedence(op.token.value);
+    int p2 = tokenizer->getPrecedence(op.expressions[0].token.value);
+    if(p1 != -1 && p2 != -1){
+        if(p2 > p1) {
+            util::swap(op.token, op.expressions[0].token);
+            util::swap(op.expressions[0].expressions[0],op.expressions[1]);
+            util::swap(op.expressions[0].expressions[0],op.expressions[0].expressions[1]);
+            util::swap(op.expressions[0],op.expressions[1]);
+        }
+    }
+
+    for(auto &e : op.expressions){
+        if(e.type == Expression::OPERATOR){
+            precedenceParsing(e);
+        }
+    }
+
+    p1 = tokenizer->getPrecedence(op.token.value);
+    p2 = tokenizer->getPrecedence(op.expressions[0].token.value);
+    if(p1 != -1 && p2 != -1){
+        if(p2 > p1) {
+            util::swap(op.token, op.expressions[0].token);
+            util::swap(op.expressions[0].expressions[0],op.expressions[1]);
+            util::swap(op.expressions[0].expressions[0],op.expressions[0].expressions[1]);
+            util::swap(op.expressions[0],op.expressions[1]);
+        }
+    }
 }
 
 bool Parser::block() {

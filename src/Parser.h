@@ -16,18 +16,20 @@ private:
     bool next();
     bool prev();
 
-    bool statement();
-    bool parameter();
-    bool expression(util::ArrayList<Expression> &expressions, const std::string &endSymbols = ";", bool consumeEndSymbol = true);
-    bool function();
-    bool block();
-
     bool check(const std::string &pattern);
     bool checkAny(const std::string &symbols);
     bool until(const std::string &symbols);
     Token get(int offset);
     void contextStepDown(Context::Type type);
     void contextStepUp();
+
+    bool statement();
+    bool parameter();
+    bool factor(Expression &e);
+    bool expression(Expression &e, const std::string &endSymbols = ";");
+    bool precedenceParsing(Expression &op);
+    bool function();
+    bool block();
 
     Tokenizer *tokenizer;
     Token token;
