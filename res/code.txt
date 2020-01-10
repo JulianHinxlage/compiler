@@ -9,7 +9,11 @@ float e = 0.7;
 
 return 0;
 
-int main(int argc, char **argv){
+int f(){
+
+}
+
+int main(int argc, char argv){
     int a = 0;
     return 0;
 
@@ -27,4 +31,8 @@ float foo(int x){
 int f(){
     int z = 0;
     return z;
+
+    float foo(){
+        int g = 0;
+    }
 }

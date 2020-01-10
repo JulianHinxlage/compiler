@@ -6,14 +6,12 @@
 #include "Tokenizer.h"
 
 Tokenizer::Tokenizer() {
-    file = 0;
     source = "";
     index = 0;
+    file = 0;
     line = 1;
     column = 0;
-    inStr = false;
-    inChar = false;
-    inComment = false;
+    inEscape = false;
 }
 
 Tokenizer::Tokenizer(const std::string &source) : Tokenizer() {
@@ -26,6 +24,7 @@ void Tokenizer::setSource(const std::string &source, int file) {
     this->file = file;
     line = 1;
     column = 0;
+    inEscape = false;
 }
 
 void Tokenizer::setToken(const std::string &type, const std::string &value) {
@@ -51,6 +50,18 @@ void Tokenizer::setDefault() {
 
 Token Tokenizer::get() {
     return token;
+}
+
+bool Tokenizer::isType(const std::string &type) {
+    if(util::split("undef str char com num hex bin float ide").contains(type)){
+        return true;
+    }
+    for(auto &t : types){
+        if(t.token.type == type){
+            return true;
+        }
+    }
+    return false;
 }
 
 bool Tokenizer::next() {
@@ -176,8 +187,8 @@ bool isMatch(const std::string &str, const std::string &range1, const std::strin
 }
 
 void Tokenizer::check() {
-    if(token.value == "\"" && !inStr && !inChar){
-        inStr = true;
+    if(token.value == "\"" && !inEscape){
+        inEscape = true;
         Token tmp = token;
         while(next()){
             tmp.value += get().value;
@@ -187,9 +198,9 @@ void Tokenizer::check() {
         }
         tmp.type = "str";
         token = tmp;
-        inStr = false;
-    }else if(token.value == "\'" && !inChar && !inStr){
-        inChar = true;
+        inEscape = false;
+    }else if(token.value == "\'" && !inEscape){
+        inEscape = true;
         Token tmp = token;
         while(next()){
             tmp.value += get().value;
@@ -199,9 +210,9 @@ void Tokenizer::check() {
         }
         tmp.type = "char";
         token = tmp;
-        inChar= false;
-    }else if(token.value == "//" && !inComment){
-        inComment = true;
+        inEscape = false;
+    }else if(token.value == "//" && !inEscape){
+        inEscape = true;
         Token tmp = token;
         while(next()){
             tmp.value += get().value;
@@ -211,9 +222,9 @@ void Tokenizer::check() {
         }
         tmp.type = "com";
         token = tmp;
-        inComment= false;
-    }else if(token.value == "/*" && !inComment){
-        inComment = true;
+        inEscape = false;
+    }else if(token.value == "/*" && !inEscape){
+        inEscape = true;
         Token tmp = token;
         while(next()){
             tmp.value += get().value;
@@ -223,8 +234,9 @@ void Tokenizer::check() {
         }
         tmp.type = "com";
         token = tmp;
-        inComment = false;
+        inEscape = false;
     }else if(token.type == "undef"){
+
         //identifier
         if(isMatch(token.value, "__azAZ", "__09azAZ")){
             token.type = "ide";

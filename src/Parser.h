@@ -11,20 +11,29 @@
 class Parser {
 public:
     Parser();
-    void parse(Tokenizer &tokenizer);
+    std::shared_ptr<Context>  parse(Tokenizer &tokenizer);
 private:
-    bool step();
+    bool next();
+    bool prev();
 
     bool statement();
     bool parameter();
     bool expresion();
     bool function();
+    bool block();
+
+    bool check(const std::string &pattern);
+    bool until(const std::string &symbols);
+    Token get(int offset);
+    void contextStepDown(Context::Type type);
+    void contextStepUp();
 
     Tokenizer *tokenizer;
     Token token;
     std::shared_ptr<Context> context;
-public:
     std::shared_ptr<Context> globalContext;
+    util::ArrayList<Token> tokens;
+    int tokenIndex;
 };
 
 

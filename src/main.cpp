@@ -51,9 +51,9 @@ int main(int argc, char *argv[]){
     tokenizer.setSource(code);
 
     Parser parser;
-    parser.parse(tokenizer);
+    auto context = parser.parse(tokenizer);
 
-    printContext(parser.globalContext);
+    printContext(context);
     util::logInfo("time: ", clock.elapsed());
 
     return 0;

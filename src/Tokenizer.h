@@ -16,6 +16,7 @@ public:
     void setToken(const std::string &type, const std::string &value);
     void setToken(const std::string &type, const util::ArrayList<std::string> &values);
     void setDefault();
+    bool isType(const std::string &type);
 
     Token get();
     bool next();
@@ -50,9 +51,7 @@ private:
     int line;
     int column;
 
-    bool inStr;
-    bool inChar;
-    bool inComment;
+    bool inEscape;
 };
 
 

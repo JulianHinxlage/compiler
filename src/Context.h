@@ -38,7 +38,7 @@ public:
         BLOCK = 2
     };
 
-    Type type;
+    Type type = NONE;
 };
 
 
