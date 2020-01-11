@@ -50,8 +50,8 @@ public:
 
 class Context {
 public:
-    std::string name;
-    std::string returnType;
+    Variable func;
+
     util::ArrayList<Variable> parameter;
 
     util::ArrayList<Variable> variables;

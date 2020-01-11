@@ -24,9 +24,9 @@ private:
     void contextStepUp();
 
     bool statement();
+    bool variable(const std::string &endSymbols, bool param = false);
     bool ifelse(Expression &e);
     bool loop(Expression &e);
-    bool parameter();
     bool factor(Expression &e, bool hasUnary = false);
     bool postFactor(Expression &e);
     bool expression(Expression &e, const std::string &endSymbols = ";");

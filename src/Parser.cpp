@@ -64,9 +64,13 @@ bool Parser::next() {
 }
 
 bool Parser::prev(){
-    if(tokenIndex > 0){
+    if(tokenIndex >= 0){
         tokenIndex--;
-        token = tokens[tokenIndex];
+        if(tokenIndex == -1){
+            token = Token();
+        }else{
+            token = tokens[tokenIndex];
+        }
         return true;
     }
     return false;
@@ -155,37 +159,63 @@ void Parser::contextStepUp() {
     }
 }
 
-bool Parser::statement() {
-    if(check("type ide") || check("ide ide")) {
-        if (check(";")) {
-            Variable &v = context->variables.add();
-            v.name = get(1).value;
-            v.type = get(2).value;
-            return true;
+bool Parser::variable(const std::string &endSymbols, bool param) {
+    if(checkAny("type ide")){
+        Variable v;
+        v.type = get(0).value;
+        int modCounter = 0;
+        while(checkAny("* &")){
+            v.mods += get(0).value;
+            modCounter++;
         }
-        if (check("=")) {
-            Variable &v = context->variables.add();
-            v.name = get(1).value;
-            v.type = get(2).value;
+        if(check("ide")){
+            v.name = get(0).value;
 
-            Expression &e = context->expressions.add(Expression(Expression::OPERATOR, get(0)));
-            e.expressions.add(Expression(Expression::VAR, get(1)));
+            Expression e;
+            if(check("=")){
+                e = Expression(Expression::OPERATOR, get(0));
+                e.expressions.add(Expression(Expression::VAR, get(1)));
 
-            Expression e2;
-            if(expression(e2, ";")){
-                e.expressions.add(e2);
+                Expression e2;
+                if(expression(e2, endSymbols)){
+                    prev();
+                    e.expressions.add(e2);
+                }
+            }
+
+            if(checkAny(endSymbols)){
+                if(param){
+                    context->parameter.add(v);
+                    if(e.type != Expression::NONE){
+                        //TODO default parameter
+                    }
+                }else{
+                    context->variables.add(v);
+                    if(e.type != Expression::NONE){
+                        context->expressions.add(e);
+                    }
+                }
                 return true;
             }
-            return true;
-        }
-        if (check("(")) {
-            contextStepDown(Context::FUNCTION);
-            context->name = get(1).value;
-            context->returnType = get(2).value;
             prev();
-            return function();
         }
+        for(int i = 0; i < modCounter;i++){
+            prev();
+        }
+        prev();
     }
+    return false;
+}
+
+bool Parser::statement() {
+    if(variable(";")){
+        return true;
+    }
+
+    if(function()){
+        return true;
+    }
+
     Expression e;
     if(ifelse(e)){
         context->expressions.add(e);
@@ -247,22 +277,6 @@ bool Parser::ifelse(Expression &e) {
             return true;
         }
 
-    }
-    return false;
-}
-
-bool Parser::parameter() {
-    if(check("type ide") || check("ide ide")) {
-        Variable &v = context->parameter.add();
-        v.name = get(0).value;
-        v.type = get(1).value;
-        if (check("=")) {
-            //TODO default parameter
-            if(until(", )")){
-                prev();
-            }
-        }
-        return true;
     }
     return false;
 }
@@ -421,23 +435,54 @@ bool Parser::block() {
 }
 
 bool Parser::function() {
+    //type + name
+    if(checkAny("type ide")) {
+        Variable v;
+        v.type = get(0).value;
+        while (checkAny("* &")) {
+            v.mods += get(0).value;
+        }
+        if (check("ide")) {
+            v.name = get(0).value;
+
+            if (check("(")) {
+                contextStepDown(Context::FUNCTION);
+                context->func = v;
+                prev();
+            }else{
+                prev();
+                prev();
+                return false;
+            }
+        }else{
+            prev();
+            return false;
+        }
+    }else{
+        return false;
+    }
+
+    //parameter list
     while(checkAny(", (")){
         if(check(")")){
             prev();
             break;
         }
-        if(!parameter()){
+        if(!variable(", )", true)){
             util::logWarning("expected \")\" at ", token.line, ":", token.column + token.value.size());
             contextStepUp();
             return false;
         }
+        prev();
     }
+
     if(!check(")")){
         util::logWarning("expected \")\" at ", token.line, ":", token.column + token.value.size());
         contextStepUp();
         return false;
     }
 
+    //body
     return block();
 }
 

@@ -32,16 +32,16 @@ void printContext(std::shared_ptr<Context> &context, int offset){
         offset++;
     }
     else if(context->type == Context::FUNCTION){
-        util::logInfo(indent(offset), "func: ", context->returnType, " ", context->name);
+        util::logInfo(indent(offset), "func: ", context->func.type, " ", context->func.mods, context->func.name);
         for(auto &p : context->parameter){
-            util::logInfo(indent(offset), "param: ", p.type, " ", p.name);
+            util::logInfo(indent(offset), "param: ", p.type, " ", p.mods, p.name);
         }
         util::logInfo(indent(offset), "{");
         offset++;
     }
 
     for(auto &v : context->variables){
-        util::logInfo(indent(offset), "var: ", v.type, " ", v.name);
+        util::logInfo(indent(offset), "var: ", v.type, " ", v.mods, v.name);
     }
 
     for(auto &c : context->contexts){
