@@ -8,19 +8,21 @@
 #include "util/Clock.h"
 #include "Parser.h"
 #include "print.h"
+#include "SemanticChecker.h"
 
 int main(int argc, char *argv[]){
     util::Clock clock;
-    auto code = util::readFile("../res/code.txt");
-
     Tokenizer tokenizer;
-    tokenizer.setDefault();
-    tokenizer.setSource(code);
-
     Parser parser;
-    auto context = parser.parse(tokenizer);
 
-    printContext(context);
+    tokenizer.setDefault();
+    tokenizer.setFile("../res/code.txt");
+
+    auto contextTree = parser.parse(tokenizer);
+
+    printContext(contextTree);
+    SemanticChecker semantic;
+    semantic.check(contextTree);
     util::logInfo("time: ", clock.elapsed());
 
     return 0;

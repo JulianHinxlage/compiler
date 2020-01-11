@@ -17,6 +17,7 @@ public:
     std::string name;
     std::string type;
     std::string mods;
+    Token location;
 };
 
 class Expression{
@@ -36,7 +37,7 @@ public:
         OBJ_CALL = 7
     };
 
-    Type type;
+    Type type = NONE;
 
     Expression(){
         type = NONE;
@@ -50,14 +51,13 @@ public:
 
 class Context {
 public:
-    Variable func;
-
-    util::ArrayList<Variable> parameter;
-
-    util::ArrayList<Variable> variables;
-    util::ArrayList<std::shared_ptr<Context>> contexts;
     std::shared_ptr<Context> parentContext = nullptr;
+
+    Variable func;
+    util::ArrayList<Variable> parameter;
+    util::ArrayList<Variable> variables;
     util::ArrayList<Expression> expressions;
+    util::ArrayList<std::shared_ptr<Context>> contexts;
 
     enum Type{
         NONE = 0,

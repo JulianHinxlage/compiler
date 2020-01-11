@@ -11,8 +11,9 @@
 class Tokenizer {
 public:
     Tokenizer();
-    explicit Tokenizer(const std::string &source);
+    void reset();
     void setSource(const std::string &source, int file = 0);
+    void setFile(const std::string &filename, int file = 0);
     void setToken(const std::string &type, const std::string &value);
     void setToken(const std::string &type, const util::ArrayList<std::string> &values);
     void setPrecedence(const std::string &value, int precedence);

@@ -14,12 +14,26 @@ Tokenizer::Tokenizer() {
     inEscape = false;
 }
 
-Tokenizer::Tokenizer(const std::string &source) : Tokenizer() {
-    setSource(source);
+void Tokenizer::reset(){
+    source = "";
+    index = 0;
+    file = 0;
+    line = 1;
+    column = 0;
+    inEscape = false;
 }
 
 void Tokenizer::setSource(const std::string &source, int file) {
     this->source = source;
+    index = 0;
+    this->file = file;
+    line = 1;
+    column = 0;
+    inEscape = false;
+}
+
+void Tokenizer::setFile(const std::string &filename, int file) {
+    this->source = util::readFile(filename);
     index = 0;
     this->file = file;
     line = 1;
@@ -34,6 +48,16 @@ void Tokenizer::setToken(const std::string &type, const std::string &value) {
 void Tokenizer::setToken(const std::string &type, const util::ArrayList<std::string> &values) {
     for(auto &value : values){
         setToken(type, value);
+    }
+}
+
+void Tokenizer::setPrecedence(const std::string &value, int precedence) {
+    precedences.add({value,precedence});
+}
+
+void Tokenizer::setPrecedence(const util::ArrayList<std::string> &values, int precedence) {
+    for(auto &value : values){
+        setPrecedence(value,precedence);
     }
 }
 
@@ -64,10 +88,6 @@ void Tokenizer::setDefault() {
     setPrecedence(util::split("= += -= *= /= %= >>= <<= &= ^= |= ||= &&= ^^="),14);
 }
 
-Token Tokenizer::get() {
-    return token;
-}
-
 bool Tokenizer::isType(const std::string &type) {
     if(util::split("undef str char com num hex bin float ide").contains(type)){
         return true;
@@ -80,16 +100,6 @@ bool Tokenizer::isType(const std::string &type) {
     return false;
 }
 
-void Tokenizer::setPrecedence(const std::string &value, int precedence) {
-    precedences.add({value,precedence});
-}
-
-void Tokenizer::setPrecedence(const util::ArrayList<std::string> &values, int precedence) {
-    for(auto &value : values){
-        setPrecedence(value,precedence);
-    }
-}
-
 int Tokenizer::getPrecedence(const std::string &value) {
     for(auto &i : precedences){
         if(i.first == value){
@@ -97,6 +107,10 @@ int Tokenizer::getPrecedence(const std::string &value) {
         }
     }
     return -1;
+}
+
+Token Tokenizer::get() {
+    return token;
 }
 
 bool Tokenizer::next() {

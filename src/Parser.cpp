@@ -37,6 +37,7 @@ std::shared_ptr<Context> Parser::parse(Tokenizer &tokenizer) {
     this->tokenizer = nullptr;
     tokens.clear();
     tokenIndex = -1;
+    token = Token();
     return ret;
 }
 
@@ -171,6 +172,7 @@ bool Parser::variable(const std::string &endSymbols, bool param) {
         if(check("ide")){
             Token name = get(0);
             v.name = get(0).value;
+            v.location = name;
 
             Expression e;
 
@@ -319,12 +321,18 @@ bool Parser::factor(Expression &e, bool hasUnary){
     }if(check("ide")){
         if(check("(")){
             e = Expression(Expression::CALL, get(1));
+            if(check(")")){
+                return postFactor(e);
+            }
             while(true){
                 Expression e2;
                 if(!expression(e2, ", )")){
                     break;
                 }
                 e.expressions.add(e2);
+                if(token.value == ")"){
+                    break;
+                }
             }
             return postFactor(e);
         }
