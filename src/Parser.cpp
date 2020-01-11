@@ -191,6 +191,10 @@ bool Parser::statement() {
         context->expressions.add(e);
         return true;
     }
+    if(loop(e)){
+        context->expressions.add(e);
+        return true;
+    }
     if(check("{")){
         Expression &e = context->expressions.add();
         contextStepDown(Context::BLOCK);
@@ -413,5 +417,73 @@ bool Parser::function() {
     }
 
     return block();
+}
+
+bool Parser::loop(Expression &e) {
+    if(check("while")){
+        if(check("(")) {
+            e = Expression(Expression::OPERATOR, get(1));
+            Expression e2;
+            if(!expression(e2, ")")) {
+                util::logWarning("expected \")\" at ", token.line, ":", token.column + token.value.size());
+            }
+            e.expressions.add(e2);
+
+            Expression e3 = Expression(Expression::BLOCK, Token());
+            contextStepDown(Context::BLOCK);
+            e3.context = context;
+            block();
+            e.expressions.add(e3);
+            return true;
+        }
+    }
+    if(check("for")){
+        if(check("(")) {
+            e = Expression(Expression::OPERATOR, get(1));
+
+            Expression e2;
+            if(check("type ide") || check("ide ide")){
+                Variable &v = context->variables.add();
+                v.name = get(0).value;
+                v.type = get(1).value;
+                if (check("=")) {
+                    Expression e3 = Expression(Expression::OPERATOR, get(0));
+                    e3.expressions.add(Expression(Expression::VAR, get(1)));
+
+                    Expression e2;
+                    if(expression(e2, ";")){
+                        e3.expressions.add(e2);
+                        e.expressions.add(e3);
+                    }
+                }
+            }else{
+                if(!expression(e2, ";")) {
+                    util::logWarning("expected \";\" at ", token.line, ":", token.column + token.value.size());
+                }
+                e.expressions.add(e2);
+            }
+
+
+            e2 = Expression();
+            if(!expression(e2, ";")) {
+                util::logWarning("expected \";\" at ", token.line, ":", token.column + token.value.size());
+            }
+            e.expressions.add(e2);
+
+            e2 = Expression();
+            if(!expression(e2, ")")) {
+                util::logWarning("expected \")\" at ", token.line, ":", token.column + token.value.size());
+            }
+            e.expressions.add(e2);
+
+            Expression e3 = Expression(Expression::BLOCK, Token());
+            contextStepDown(Context::BLOCK);
+            e3.context = context;
+            block();
+            e.expressions.add(e3);
+            return true;
+        }
+    }
+    return false;
 }
 

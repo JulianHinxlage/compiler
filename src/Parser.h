@@ -25,6 +25,7 @@ private:
 
     bool statement();
     bool ifelse(Expression &e);
+    bool loop(Expression &e);
     bool parameter();
     bool factor(Expression &e);
     bool expression(Expression &e, const std::string &endSymbols = ";");
