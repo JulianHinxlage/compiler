@@ -169,12 +169,34 @@ bool Parser::variable(const std::string &endSymbols, bool param) {
             modCounter++;
         }
         if(check("ide")){
+            Token name = get(0);
             v.name = get(0).value;
 
             Expression e;
+
+            if(check("[")){
+                if(checkAny("num hex bin")){
+                    if(check("]")){
+                        v.mods += "[";
+                        v.mods += get(1).value;
+                        v.mods += "]";
+                    }else{
+                        util::logWarning("expected \"]\" at ", token.line, ":", token.column + token.value.size());
+                    }
+                }else{
+                    if(check("]")){
+                        v.mods += "[";
+                        v.mods += "]";
+                    }else{
+                        util::logWarning("expected \"]\" at ", token.line, ":", token.column + token.value.size());
+                    }
+                }
+            }
+
+
             if(check("=")){
                 e = Expression(Expression::OPERATOR, get(0));
-                e.expressions.add(Expression(Expression::VAR, get(1)));
+                e.expressions.add(Expression(Expression::VAR, name));
 
                 Expression e2;
                 if(expression(e2, endSymbols)){
@@ -304,6 +326,17 @@ bool Parser::factor(Expression &e, bool hasUnary){
                 }
                 e.expressions.add(e2);
             }
+            return postFactor(e);
+        }
+        if(check("[")){
+            e = Expression(Expression::OPERATOR, get(0));
+            e.expressions.add(Expression(Expression::VAR, get(1)));
+
+            Expression e2;
+            if(!expression(e2, "]")){
+                util::logWarning("expected \"]\" at ", token.line, ":", token.column + token.value.size());
+            }
+            e.expressions.add(e2);
             return postFactor(e);
         }
         e = Expression(Expression::VAR, get(0));
@@ -553,4 +586,3 @@ bool Parser::loop(Expression &e) {
     }
     return false;
 }
-
