@@ -186,6 +186,11 @@ bool Parser::statement() {
             return function();
         }
     }
+    Expression e;
+    if(ifelse(e)){
+        context->expressions.add(e);
+        return true;
+    }
     if(check("{")){
         Expression &e = context->expressions.add();
         contextStepDown(Context::BLOCK);
@@ -194,10 +199,50 @@ bool Parser::statement() {
         prev();
         return block();
     }
-    Expression e;
     if(expression(e, ";")){
         context->expressions.add(e);
         return true;
+    }
+    return false;
+}
+
+bool Parser::ifelse(Expression &e) {
+    if(check("if")){
+        if (check("(")) {
+            e = Expression(Expression::OPERATOR, get(1));
+            Expression e2;
+            if (expression(e2, ")")) {
+                e.expressions.add(e2);
+                Expression e3 = Expression(Expression::BLOCK, Token());
+                contextStepDown(Context::BLOCK);
+                e3.context = context;
+                e.expressions.add(e3);
+                if(block()){
+                    Expression e4;
+                    if(ifelse(e4)){
+                        e.expressions.add(e4);
+                    }
+                    return true;
+                }
+            }else{
+                util::logWarning("expected expression at ", token.line, ":", token.column + token.value.size());
+            }
+            prev();
+        }
+        prev();
+    }
+    if(check("else")){
+        if(ifelse(e)){
+            return true;
+        }
+
+        e = Expression(Expression::BLOCK, Token());
+        contextStepDown(Context::BLOCK);
+        e.context = context;
+        if (block()) {
+            return true;
+        }
+
     }
     return false;
 }
@@ -248,6 +293,9 @@ bool Parser::expression(Expression &e, const std::string &endSymbols) {
             e.type = Expression::OPERATOR;
             e.expressions.add(e3);
         }
+        if(token.value != ")"){
+            util::logWarning("expected \")\" at ", token.line, ":", token.column + token.value.size());
+        }
     }
 
     if(e.token.value.empty()){
@@ -269,8 +317,15 @@ bool Parser::expression(Expression &e, const std::string &endSymbols) {
                 Expression e3;
                 e2.token = get(0);
                 e2.type = Expression::OPERATOR;
-                expression(e3, ")");
+                if(!expression(e3, ")")){
+                    util::logWarning("expected \")\" at ", token.line, ":", token.column + token.value.size());
+                }
+                if(token.value != ")"){
+                    util::logWarning("expected \")\" at ", token.line, ":", token.column + token.value.size());
+                }
                 e2.expressions.add(e3);
+            }else{
+                util::logWarning("expected expression after ", token.line, ":", token.column + token.value.size());
             }
         }
 
@@ -313,6 +368,7 @@ bool Parser::precedenceParsing(Expression &op){
             util::swap(op.expressions[0],op.expressions[1]);
         }
     }
+    return true;
 }
 
 bool Parser::block() {
@@ -358,3 +414,4 @@ bool Parser::function() {
 
     return block();
 }
+
