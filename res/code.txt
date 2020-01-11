@@ -35,4 +35,6 @@ int main(int argc, string argv){
     for(int x = 1; x < 10; x += 1){
         a = 4;
     }
+
+    y = -a * &v;
 }

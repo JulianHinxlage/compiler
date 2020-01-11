@@ -367,10 +367,12 @@ bool Parser::precedenceParsing(Expression &op){
     int p2 = tokenizer->getPrecedence(op.expressions[0].token.value);
     if(p1 != -1 && p2 != -1){
         if(p2 > p1) {
-            util::swap(op.token, op.expressions[0].token);
-            util::swap(op.expressions[0].expressions[0],op.expressions[1]);
-            util::swap(op.expressions[0].expressions[0],op.expressions[0].expressions[1]);
-            util::swap(op.expressions[0],op.expressions[1]);
+            if(op.type != Expression::UNARY_OPERATOR && op.expressions[0].type != Expression::UNARY_OPERATOR) {
+                util::swap(op.token, op.expressions[0].token);
+                util::swap(op.expressions[0].expressions[0], op.expressions[1]);
+                util::swap(op.expressions[0].expressions[0], op.expressions[0].expressions[1]);
+                util::swap(op.expressions[0], op.expressions[1]);
+            }
         }
     }
 
@@ -384,10 +386,12 @@ bool Parser::precedenceParsing(Expression &op){
     p2 = tokenizer->getPrecedence(op.expressions[0].token.value);
     if(p1 != -1 && p2 != -1){
         if(p2 > p1) {
-            util::swap(op.token, op.expressions[0].token);
-            util::swap(op.expressions[0].expressions[0],op.expressions[1]);
-            util::swap(op.expressions[0].expressions[0],op.expressions[0].expressions[1]);
-            util::swap(op.expressions[0],op.expressions[1]);
+            if(op.type != Expression::UNARY_OPERATOR && op.expressions[0].type != Expression::UNARY_OPERATOR) {
+                util::swap(op.token, op.expressions[0].token);
+                util::swap(op.expressions[0].expressions[0], op.expressions[1]);
+                util::swap(op.expressions[0].expressions[0], op.expressions[0].expressions[1]);
+                util::swap(op.expressions[0], op.expressions[1]);
+            }
         }
     }
     return true;
