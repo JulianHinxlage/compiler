@@ -267,11 +267,20 @@ bool Parser::parameter() {
     return false;
 }
 
-bool Parser::factor(Expression &e){
+bool Parser::postFactor(Expression &e) {
+    if(checkAny("++ --")){
+        Expression e2 = Expression(Expression::UNARY_OPERATOR, get(0));
+        e2.expressions.add(e);
+        e = e2;
+    }
+    return true;
+}
+
+bool Parser::factor(Expression &e, bool hasUnary){
     if(checkAny("num hex bin float str char")) {
         e = Expression(Expression::CONST, get(0));
-        return true;
-    }else if(check("ide")){
+        return postFactor(e);
+    }if(check("ide")){
         if(check("(")){
             e = Expression(Expression::CALL, get(1));
             while(true){
@@ -281,10 +290,19 @@ bool Parser::factor(Expression &e){
                 }
                 e.expressions.add(e2);
             }
-            return true;
+            return postFactor(e);
         }
         e = Expression(Expression::VAR, get(0));
-        return true;
+        return postFactor(e);
+    }
+    if(!hasUnary && checkAny("- + & * -- ++ ~ !")){
+        e = Expression(Expression::UNARY_OPERATOR, get(0));
+        Expression e2;
+        if(factor(e2, true)){
+            e.expressions.add(e2);
+            return postFactor(e);
+        }
+        prev();
     }
     return false;
 }

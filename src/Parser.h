@@ -27,7 +27,8 @@ private:
     bool ifelse(Expression &e);
     bool loop(Expression &e);
     bool parameter();
-    bool factor(Expression &e);
+    bool factor(Expression &e, bool hasUnary = false);
+    bool postFactor(Expression &e);
     bool expression(Expression &e, const std::string &endSymbols = ";");
     bool precedenceParsing(Expression &op);
     bool function();
