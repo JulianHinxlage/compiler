@@ -58,7 +58,9 @@ void SemanticChecker::check(Expression &e, std::shared_ptr<Context> context) {
     if(e.type == Expression::CALL){
         Context *func = getFunc(context, e.token.value);
         if(func == nullptr){
-            util::logWarning("function ", e.token.value, " is not defined at ", e.token.line, ":", e.token.column);
+            if(e.token.value != "syscall"){
+                util::logWarning("function ", e.token.value, " is not defined at ", e.token.line, ":", e.token.column);
+            }
         }else{
             if(func->parameter.size() != e.expressions.size()){
                 util::logWarning("function ", e.token.value, " takes ", func->parameter.size(), " arguments, but ", e.expressions.size(), " arguments provided at ", e.token.line, ":", e.token.column);

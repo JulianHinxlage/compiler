@@ -2,10 +2,11 @@
 // Copyright (c) 2020 Julian Hinxlage. All rights reserved.
 //
 
+#include <util/strutil.h>
 #include "CGenerator.h"
 
 void CGenerator::generate(std::shared_ptr<Context> context, std::string &output) {
-    output = "#include <stdio.h>\n";
+    output = "#include <unistd.h>\n";
 
     //global variables
     for(auto &v : context->variables){
@@ -24,6 +25,25 @@ void CGenerator::generate(std::shared_ptr<Context> context, std::string &output)
     }
 }
 
+void CGenerator::generateVariable(Variable &v, std::string &output, int offset) {
+    output += indent(offset);
+    output += v.type;
+    output += " ";
+    if(util::strContains(v.mods, " ")){
+        if(util::split(v.mods).size() == 2){
+            output += util::split(v.mods)[0];
+            output += v.name;
+            output += util::split(v.mods)[1];
+        }else{
+            output += v.name;
+            output += util::split(v.mods)[0];
+        }
+    }else{
+        output += v.mods;
+        output += v.name;
+    }
+}
+
 void CGenerator::generateFunction(std::shared_ptr<Context> context, std::string &output, int offset) {
     //generate nested functions
     for(auto &f : context->contexts){
@@ -34,19 +54,12 @@ void CGenerator::generateFunction(std::shared_ptr<Context> context, std::string 
 
     if(context->type == Context::FUNCTION) {
         //function head
-        output += indent(offset);
-        output += context->func.type;
-        output += " ";
-        output += context->func.mods;
-        output += functionName(context);
+        generateVariable(context->func, output, offset);
         output += "(";
 
         //parameter
         for (auto &v : context->parameter) {
-            output += v.type;
-            output += " ";
-            output += v.mods;
-            output += v.name;
+            generateVariable(v, output, 0);
             if (context->parameter.indexOf(v) != context->parameter.size() - 1) {
                 output += ", ";
             }
@@ -59,11 +72,7 @@ void CGenerator::generateFunction(std::shared_ptr<Context> context, std::string 
 
     //local variables
     for(auto &v : context->variables){
-        output += indent(offset);
-        output += v.type;
-        output += " ";
-        output += v.mods;
-        output += v.name;
+        generateVariable(v, output, offset);
         output += ";\n";
     }
 
@@ -95,12 +104,23 @@ void CGenerator::generateExpression(std::shared_ptr<Context> context, Expression
             break;
         }
         case Expression::OPERATOR:{
-            generateExpression(context, expression.expressions[0], output, 0);
-            output += " ";
-            output += expression.token.value;
+            if(expression.token.value == "("){
+                output += expression.token.value;
+                generateExpression(context, expression.expressions[0], output, 0);
+            }else{
+                generateExpression(context, expression.expressions[0], output, 0);
+                output += " ";
+                output += expression.token.value;
+            }
             if(expression.expressions.size() >= 2){
                 output += " ";
                 generateExpression(context, expression.expressions[1], output, 0);
+            }
+            if(expression.token.value == "["){
+                output += "]";
+            }
+            if(expression.token.value == "("){
+                output += ")";
             }
             break;
         }

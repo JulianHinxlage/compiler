@@ -14,7 +14,7 @@
 #include <fstream>
 
 int main(int argc, char *argv[]){
-    util::Clock clock;
+    //util::Clock clock;
     Tokenizer tokenizer;
     Parser parser;
 
@@ -39,6 +39,6 @@ int main(int argc, char *argv[]){
     system("gcc ../res/output.c -o ../res/output.out");
     system("../res/output.out");
 
-    util::logInfo("time: ", clock.elapsed());
+    //util::logInfo("time: ", clock.elapsed());
     return 0;
 }

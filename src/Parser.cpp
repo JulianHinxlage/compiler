@@ -179,7 +179,7 @@ bool Parser::variable(const std::string &endSymbols, bool param) {
             if(check("[")){
                 if(checkAny("num hex bin")){
                     if(check("]")){
-                        v.mods += "[";
+                        v.mods += " [";
                         v.mods += get(1).value;
                         v.mods += "]";
                     }else{
