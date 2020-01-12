@@ -34,7 +34,8 @@ public:
         OPERATOR = 4,
         BLOCK = 5,
         CALL = 6,
-        OBJ_CALL = 7
+        OBJ_CALL = 7,
+        KEY_WORD = 8
     };
 
     Type type = NONE;

@@ -7,8 +7,10 @@
 #include "Tokenizer.h"
 #include "util/Clock.h"
 #include "Parser.h"
-#include "print.h"
 #include "SemanticChecker.h"
+#include "CGenerator.h"
+
+#include <fstream>
 
 int main(int argc, char *argv[]){
     util::Clock clock;
@@ -20,9 +22,17 @@ int main(int argc, char *argv[]){
 
     auto contextTree = parser.parse(tokenizer);
 
-    printContext(contextTree);
     SemanticChecker semantic;
     semantic.check(contextTree);
+
+    CGenerator generator;
+    std::string output;
+    generator.generate(contextTree, output);
+
+    std::ofstream stream("../res/output.c");
+    stream << output;
+    stream.close();
+
     util::logInfo("time: ", clock.elapsed());
 
     return 0;

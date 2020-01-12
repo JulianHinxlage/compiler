@@ -257,6 +257,16 @@ bool Parser::statement() {
         prev();
         return block();
     }
+    if(check("return")){
+        Expression e2 = Expression(Expression::KEY_WORD, get(0));
+        if(expression(e, ";")){
+            e2.expressions.add(e);
+            context->expressions.add(e2);
+            return true;
+        }
+        prev();
+    }
+
     if(expression(e, ";")){
         context->expressions.add(e);
         return true;
@@ -267,7 +277,7 @@ bool Parser::statement() {
 bool Parser::ifelse(Expression &e) {
     if(check("if")){
         if (check("(")) {
-            e = Expression(Expression::OPERATOR, get(1));
+            e = Expression(Expression::KEY_WORD, get(1));
             Expression e2;
             if (expression(e2, ")")) {
                 e.expressions.add(e2);
@@ -530,7 +540,7 @@ bool Parser::function() {
 bool Parser::loop(Expression &e) {
     if(check("while")){
         if(check("(")) {
-            e = Expression(Expression::OPERATOR, get(1));
+            e = Expression(Expression::KEY_WORD, get(1));
             Expression e2;
             if(!expression(e2, ")")) {
                 util::logWarning("expected \")\" at ", token.line, ":", token.column + token.value.size());
@@ -547,7 +557,7 @@ bool Parser::loop(Expression &e) {
     }
     if(check("for")){
         if(check("(")) {
-            e = Expression(Expression::OPERATOR, get(1));
+            e = Expression(Expression::KEY_WORD, get(1));
 
             Expression e2;
             if(check("type ide") || check("ide ide")){

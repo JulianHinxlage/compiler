@@ -9,10 +9,11 @@
 
 class SemanticChecker {
 public:
+    void check(std::shared_ptr<Context> context);
+private:
     Variable *getVar(std::shared_ptr<Context> context, const std::string &var);
     Context *getFunc(std::shared_ptr<Context> context, const std::string &func);
     void check(Expression &e, std::shared_ptr<Context> context);
-    void check(std::shared_ptr<Context> context);
 };
 
 

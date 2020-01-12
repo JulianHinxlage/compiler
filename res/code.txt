@@ -17,6 +17,7 @@ int main(){
     }
     v = 10;
 
+    sum(1,2);
     foo();
 
     int foo(){
