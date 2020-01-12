@@ -5,7 +5,7 @@
 #include "CGenerator.h"
 
 void CGenerator::generate(std::shared_ptr<Context> context, std::string &output) {
-    output = "";
+    output = "#include <stdio.h>\n";
 
     //global variables
     for(auto &v : context->variables){
@@ -119,7 +119,13 @@ void CGenerator::generateExpression(std::shared_ptr<Context> context, Expression
             return;
         }
         case Expression::CALL:{
-            output += functionName(getFunc(context, expression.token.value));
+
+            auto func = getFunc(context, expression.token.value);
+            if(func != nullptr){
+                output += functionName(func);
+            }else{
+                output += expression.token.value;
+            }
             output += "(";
 
             for(auto &e : expression.expressions){

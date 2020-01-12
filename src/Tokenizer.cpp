@@ -42,7 +42,7 @@ void Tokenizer::setFile(const std::string &filename, int file) {
 }
 
 void Tokenizer::setToken(const std::string &type, const std::string &value) {
-    types.add(Data(Token(type,value), 0, 0));
+    types.add(Token(type,value));
 }
 
 void Tokenizer::setToken(const std::string &type, const util::ArrayList<std::string> &values) {
@@ -93,7 +93,7 @@ bool Tokenizer::isType(const std::string &type) {
         return true;
     }
     for(auto &t : types){
-        if(t.token.type == type){
+        if(t.type == type){
             return true;
         }
     }
@@ -114,94 +114,76 @@ Token Tokenizer::get() {
 }
 
 bool Tokenizer::next() {
-    int startIndex = index;
-    int endIndex = -1;
-    bool found = false;
-    bool inProcess = true;
-    int startLine = line;
-    int startColumn = column;
+    token = Token("","",line,column);
+    token.file = file;
+    if(index >= (int)source.size()){
+        return false;
+    }
+    int maxLength = 0;
+    Token found;
 
-    while(!(found && !inProcess)){
-        if(index >= (int)source.size()){
-            if(!found){
-                token.type = "undef";
-                token.value = source.substr(startIndex, startIndex - index);
-                token.line = startLine;
-                token.column = startColumn + 1;
-                endIndex = index;
-                found = index > startIndex;
+    for(auto &data : types){
+        int i = 0;
+        for(i = 0; i < (int)data.value.size();i++){
+            if(index + i < (int)source.size()){
+                if(source[index + i] == data.value[i]){
+                    continue;
+                }
             }
             break;
         }
 
-        char c = source[index];
+        if(i == (int)data.value.size()){
+            //match
+            if(i > maxLength){
+                maxLength = i;
+                found = data;
+            }
+        }
+    }
+
+    if(maxLength != 0) {
+        token.value = found.value;
+        token.type = found.type;
+    }else {
+        token.type = "undef";
+        token.value = source[index];
+
+        //check for max length undef
+        Token last = token;
+        int i = 0;
+
+        while(true) {
+            checkUndef();
+            if (token.type != "undef") {
+                last = token;
+                token.type = "undef";
+                i++;
+                token.value += source[index + i];
+            }else{
+                break;
+            }
+        }
+
+        token = last;
+        maxLength = token.value.size();
+    }
+
+    //calculate line and column for next token
+    for(int i = 0; i < maxLength;i++){
+        char c = source[index + i];
         column++;
         if(c == '\n'){
             line++;
             column = 0;
         }
-
-        inProcess = false;
-        //check all values
-        for(auto &data : types){
-            if(data.matchCounter < (int)data.token.value.size()){
-                if (data.token.value[data.matchCounter] == c) {
-                    inProcess = true;
-                    if(data.matchCounter == 0){
-                        data.startIndex = index;
-                        data.token.line = line;
-                        data.token.column = column;
-                        data.token.file = file;
-                    }
-                    data.matchCounter++;
-                }else{
-                    data.matchCounter = 0;
-                }
-
-                if(data.matchCounter >= (int)data.token.value.size()) {
-                    //match
-                    if(data.startIndex == startIndex){
-                        token = data.token;
-                        endIndex = index + 1;
-                    }else if(!found){
-                        token.type = "undef";
-                        token.value = source.substr(startIndex, data.startIndex - startIndex);
-                        token.line = startLine;
-                        token.column = startColumn + 1;
-                        endIndex = data.startIndex;
-                    }
-                    found = true;
-                }
-            }
-
-        }
-
-        index++;
     }
+    index += maxLength;
 
-    if(endIndex != -1){
-        index = endIndex;
-        line = startLine;
-        column = startColumn;
-
-        for(int i = startIndex;i < index;i++){
-            char c = source[i];
-            column++;
-            if(c == '\n'){
-                line++;
-                column = 0;
-            }
-        }
-    }
-
-    for(auto &data : types) {
-        data.matchCounter = 0;
-        data.startIndex = 0;
-    }
-
+    //check for multi token reduction
     check();
 
-    return found;
+    return true;
 }
 
 bool inRange(char c, char r1, char r2){
@@ -288,8 +270,11 @@ void Tokenizer::check() {
         tmp.type = "com";
         token = tmp;
         inEscape = false;
-    }else if(token.type == "undef"){
+    }
+}
 
+void Tokenizer::checkUndef() {
+    if(token.type == "undef"){
         //identifier
         if(isMatch(token.value, "__azAZ", "__09azAZ")){
             token.type = "ide";

@@ -9,6 +9,7 @@
 #include "Parser.h"
 #include "SemanticChecker.h"
 #include "CGenerator.h"
+#include "print.h"
 
 #include <fstream>
 
@@ -22,6 +23,8 @@ int main(int argc, char *argv[]){
 
     auto contextTree = parser.parse(tokenizer);
 
+
+    //printContext(contextTree);
     SemanticChecker semantic;
     semantic.check(contextTree);
 
@@ -33,7 +36,9 @@ int main(int argc, char *argv[]){
     stream << output;
     stream.close();
 
-    util::logInfo("time: ", clock.elapsed());
+    system("gcc ../res/output.c -o ../res/output.out");
+    system("../res/output.out");
 
+    util::logInfo("time: ", clock.elapsed());
     return 0;
 }

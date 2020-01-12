@@ -26,28 +26,10 @@ public:
     bool next();
 
 private:
-    class Data{
-    public:
-        Token token;
-        int matchCounter;
-        int startIndex;
-
-        Data(){
-            token = Token();
-            matchCounter = 0;
-            startIndex = 0;
-        }
-
-        Data(const Token &token, int matchCounter, int startIndex){
-            this->token = token;
-            this->matchCounter = matchCounter;
-            this->startIndex = startIndex;
-        }
-    };
-
     void check();
+    void checkUndef();
 
-    util::ArrayList<Data> types;
+    util::ArrayList<Token> types;
     util::ArrayList<std::pair<std::string,int>> precedences;
     std::string source;
     int index;

@@ -11,7 +11,7 @@ int v = 0;
 int main(){
     int i = 0;
     int s = 0;
-    while(i < 10){
+    while(i < 100){
         s = sum(s,i);
         i++;
     }
@@ -23,4 +23,5 @@ int main(){
     int foo(){
         v = 10;
     }
+    printf("%i\n", s);
 }
