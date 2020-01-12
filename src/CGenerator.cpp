@@ -69,8 +69,7 @@ void CGenerator::generateFunction(std::shared_ptr<Context> context, std::string 
 
     //body
     for(auto &e : context->expressions){
-        generateExpression(context, e, output, offset);
-        output += ";\n";
+        generateExpression(context, e, output, offset, true);
     }
 
     offset--;
@@ -86,10 +85,15 @@ std::string CGenerator::indent(int count) {
     return str;
 }
 
-void CGenerator::generateExpression(std::shared_ptr<Context> context, Expression &expression, std::string &output, int offset) {
+void CGenerator::generateExpression(std::shared_ptr<Context> context, Expression &expression, std::string &output, int offset, bool top) {
     output += indent(offset);
 
     switch(expression.type){
+        case Expression::BLOCK:{
+            generateFunction(expression.context, output, offset);
+            top = false;
+            break;
+        }
         case Expression::OPERATOR:{
             generateExpression(context, expression.expressions[0], output, 0);
             output += " ";
@@ -98,25 +102,48 @@ void CGenerator::generateExpression(std::shared_ptr<Context> context, Expression
                 output += " ";
                 generateExpression(context, expression.expressions[1], output, 0);
             }
-            return;
+            break;
         }
         case Expression::KEY_WORD:{
             output += expression.token.value;
 
-            if(expression.token.value != "return"){
-                output += "(";
-                generateExpression(context, expression.expressions[0], output, 0);
-                output += ")";
-                generateFunction(expression.expressions[1].context, output, offset);
-                //output += "}\n";
-            }else{
+            if(expression.token.value == "return"){
                 output += " ";
                 for(auto &e : expression.expressions){
                     generateExpression(context, e, output, 0);
                 }
             }
-
-            return;
+            else if(expression.token.value == "for"){
+                output += "(";
+                generateExpression(context, expression.expressions[0], output, 0);
+                output += "; ";
+                generateExpression(context, expression.expressions[1], output, 0);
+                output += "; ";
+                generateExpression(context, expression.expressions[2], output, 0);
+                output += ")";
+                generateExpression(context, expression.expressions[3], output, offset);
+                top = false;
+            }else if(expression.token.value == "if"){
+                output += "(";
+                generateExpression(context, expression.expressions[0], output, 0);
+                output += ")";
+                if(expression.expressions.size() >= 3){
+                    generateExpression(context, expression.expressions[1], output, offset);
+                    output += indent(offset);
+                    output += "else";
+                    generateExpression(context, expression.expressions[2], output, offset);
+                }else{
+                    generateExpression(context, expression.expressions[1], output, offset);
+                }
+                top = false;
+            }else{
+                output += "(";
+                generateExpression(context, expression.expressions[0], output, 0);
+                output += ")";
+                generateExpression(context, expression.expressions[1], output, offset);
+                top = false;
+            }
+            break;
         }
         case Expression::CALL:{
 
@@ -136,15 +163,15 @@ void CGenerator::generateExpression(std::shared_ptr<Context> context, Expression
             }
 
             output += ")";
-            return;
+            break;
         }
         case Expression::VAR:{
             output += expression.token.value;
-            return;
+            break;
         }
         case Expression::CONST:{
             output += expression.token.value;
-            return;
+            break;
         }
         default:{
             output += expression.token.value;
@@ -152,7 +179,11 @@ void CGenerator::generateExpression(std::shared_ptr<Context> context, Expression
             for(auto &e : expression.expressions){
                 generateExpression(context, e, output, 0);
             }
+            break;
         }
+    }
+    if(top){
+        output += ";\n";
     }
 }
 
