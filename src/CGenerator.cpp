@@ -35,7 +35,11 @@ void CGenerator::generateFunctionDeclaration(std::shared_ptr<Context> context, s
     }
     if(context->type == Context::FUNCTION){
         //function head
+        std::string name = context->func.name;
+        context->func.name = functionName(context);
         generateVariable(context->func, output, offset);
+        context->func.name = name;
+
         output += "(";
 
         //parameter
@@ -217,6 +221,13 @@ void CGenerator::generateExpression(std::shared_ptr<Context> context, Expression
         }
         case Expression::CONST:{
             output += expression.token.value;
+            break;
+        }
+        case Expression::CAST:{
+            output += "(";
+            output += expression.token.value;
+            output += ")";
+            generateExpression(context, expression.expressions[0], output, offset);
             break;
         }
         default:{

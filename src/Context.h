@@ -35,7 +35,8 @@ public:
         BLOCK = 5,
         CALL = 6,
         OBJ_CALL = 7,
-        KEY_WORD = 8
+        KEY_WORD = 8,
+        CAST = 9
     };
 
     Type type = NONE;

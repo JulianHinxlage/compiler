@@ -24,6 +24,7 @@ private:
     void contextStepUp();
 
     bool statement();
+    bool type(Expression &e);
     bool variable(const std::string &endSymbols, bool param = false);
     bool ifelse(Expression &e);
     bool loop(Expression &e);

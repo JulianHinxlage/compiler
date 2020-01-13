@@ -160,6 +160,20 @@ void Parser::contextStepUp() {
     }
 }
 
+bool Parser::type(Expression &e){
+    if(checkAny("type ide")) {
+        int modCounter = 0;
+        e = Expression(Expression::Type::CAST, get(0));
+
+        while (checkAny("* &")) {
+            e.token.value += get(0).value;
+            modCounter++;
+        }
+        return true;
+    }
+    return false;
+}
+
 bool Parser::variable(const std::string &endSymbols, bool param) {
     if(checkAny("type ide")){
         Variable v;
@@ -362,6 +376,20 @@ bool Parser::factor(Expression &e, bool hasUnary){
         }
         e = Expression(Expression::VAR, get(0));
         return postFactor(e);
+    }else if(check("(")){
+        //cast
+        Expression e2;
+        if(type(e2)){
+            if(check(")")){
+                Expression e3;
+                if(factor(e3)){
+                    e2.expressions.add(e3);
+                }
+                e = e2;
+                return true;
+            }
+            prev();
+        }
     }
     if(!hasUnary && checkAny("- + & * -- ++ ~ !")){
         e = Expression(Expression::UNARY_OPERATOR, get(0));
@@ -379,6 +407,21 @@ bool Parser::expression(Expression &e, const std::string &endSymbols) {
     if(check("(")){
         Expression e3;
         e.token = get(0);
+
+        //cast
+        Expression e2;
+        if(type(e2)){
+            if(check(")")){
+                if(factor(e3)){
+                    e2.expressions.add(e3);
+                }
+                e = e2;
+                expression(e, endSymbols);
+                return true;
+            }
+            prev();
+        }
+
         if(expression(e3, ")")){
             e.type = Expression::OPERATOR;
             e.expressions.add(e3);
@@ -407,6 +450,7 @@ bool Parser::expression(Expression &e, const std::string &endSymbols) {
                 Expression e3;
                 e2.token = get(0);
                 e2.type = Expression::OPERATOR;
+
                 if(!expression(e3, ")")){
                     errors.error(token, true, "expected \")\"");
                 }

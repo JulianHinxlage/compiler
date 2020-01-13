@@ -2,6 +2,16 @@
     library code to test compiler
 */
 
+char *alloc(int bytes){
+    char *ptr = (char*)syscall(12,0);
+    ptr = (char*)syscall(12, ptr + bytes);
+    return ptr;
+}
+
+void dealloc(char *ptr){
+    syscall(12, ptr);
+}
+
 int strlen(char *str){
     int len = 0;
     while(str[len] != '\0'){
