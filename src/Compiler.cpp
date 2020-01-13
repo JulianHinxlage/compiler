@@ -46,7 +46,9 @@ std::string &Compiler::generate(bool obfuscate){
     }
 
     semantic.check(ast);
-    generator.generate(ast, output);
+    if(errors.errorCount == 0){
+        generator.generate(ast, output);
+    }
     return output;
 }
 

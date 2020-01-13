@@ -7,10 +7,13 @@
 #include "Compiler.h"
 #include "Errors.h"
 #include <fstream>
+#include "util/strutil.h"
 
 int main(int argc, char *argv[]){
-    util::Clock clock;
     bool showTime = false;
+    bool outputCFile = false;
+
+    util::Clock clock;
     util::logSetTime(false);
     util::logSetDate(false);
 
@@ -24,11 +27,18 @@ int main(int argc, char *argv[]){
         return 1;
     }
 
-    std::ofstream stream("../res/output.c");
-    stream << output;
-    stream.close();
+    if(outputCFile){
+        std::ofstream stream("../res/output.c");
+        stream << output;
+        stream.close();
+        system("gcc -O4 -s -Wno-builtin-declaration-mismatch ../res/output.c -o ../res/output.out");
+    }else{
+        FILE *fd = popen("gcc -O4 -s -Wno-builtin-declaration-mismatch -xc - -o ../res/output.out", "w");
+        fwrite(output.c_str(), output.size(), 1, fd);
+        pclose(fd);
+    }
 
-    system("gcc -O4 -s ../res/output.c -o ../res/output.out");
+
     if(showTime){
         util::logInfo("compile time: ", clock.round());
     }

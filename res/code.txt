@@ -3,7 +3,6 @@
 */
 
 int main(){
-    println("Hello, World!");
     int a = 20;
     printInt(a);
     print("! = ");
