@@ -31,6 +31,7 @@ void Compiler::compile(const std::string &file) {
         }
 
         for(auto &c : newAst->contexts){
+            c->parentContext = ast;
             ast->contexts.add(c);
         }
     }
@@ -45,9 +46,11 @@ std::string &Compiler::generate(bool obfuscate){
         generator.nameTranslationHex = true;
     }
 
-    semantic.check(ast);
-    if(errors.errorCount == 0){
-        generator.generate(ast, output);
+    if(ast != nullptr){
+        semantic.check(ast);
+        if(errors.errorCount == 0){
+            generator.generate(ast, output);
+        }
     }
     return output;
 }

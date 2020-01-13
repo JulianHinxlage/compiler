@@ -3,23 +3,72 @@
 //
 
 #include "util/log.h"
-#include "util/Clock.h"
 #include "Compiler.h"
 #include "Errors.h"
 #include <fstream>
 #include "util/strutil.h"
+#include <iostream>
+
+const char *helpMsg = &R"(
+-o <output-file>   : output of compilation
+-r                 : run program
+-c <c-output-file> : output c code
+-h                 : show help
+)"[1];
 
 int main(int argc, char *argv[]){
-    bool showTime = false;
-    bool outputCFile = false;
+    bool useOutputCFile = false;
+    bool runProgram = false;
 
-    util::Clock clock;
     util::logSetTime(false);
     util::logSetDate(false);
 
+    std::string inputFiles = "";
+    std::string outputFile = "a.out";
+    std::string outputCFile = "a.c";
+
+    //argument parsing
+    for(int i = 1; i < argc;i++){
+        std::string arg = argv[i];
+        if(arg == "-o"){
+            i++;
+            if(i >= argc){
+                util::logInfo("expected argument after -o flag");
+            }else{
+                outputFile = argv[i];
+            }
+        }else if(arg == "-c"){
+            useOutputCFile = true;
+            i++;
+            if(i >= argc){
+                util::logInfo("expected argument after -c flag");
+            }else{
+                outputCFile = argv[i];
+            }
+        }else if(arg == "-r"){
+            runProgram = true;
+        }else if(arg == "-h" || arg == "--help" || arg == "-help"){
+            std::cout << helpMsg;
+            return 0;
+        }
+        else{
+            if(!inputFiles.empty()){
+                inputFiles += " ";
+            }
+            inputFiles += arg;
+        }
+    }
+
+    if(inputFiles.empty()){
+        util::logInfo("no source files");
+        return 0;
+    }
+
+    //compile
     Compiler compiler;
-    compiler.compile("../res/code.txt");
-    compiler.compile("../res/lib.txt");
+    for(auto &i : util::split(inputFiles)){
+        compiler.compile(i);
+    }
     std::string &output = compiler.generate(true);
 
     if(errors.errorCount > 0){
@@ -27,24 +76,25 @@ int main(int argc, char *argv[]){
         return 1;
     }
 
-    if(outputCFile){
-        std::ofstream stream("../res/output.c");
+    if(output.empty()){
+        return 0;
+    }
+
+    //compile c code
+    if(useOutputCFile){
+        std::ofstream stream(outputCFile);
         stream << output;
         stream.close();
-        system("gcc -O4 -s -Wno-builtin-declaration-mismatch ../res/output.c -o ../res/output.out");
+        system((std::string("gcc -O4 -s -Wno-builtin-declaration-mismatch ") + outputCFile + " -o " + outputFile).c_str());
     }else{
-        FILE *fd = popen("gcc -O4 -s -Wno-builtin-declaration-mismatch -xc - -o ../res/output.out", "w");
+        FILE *fd = popen((std::string("gcc -O4 -s -Wno-builtin-declaration-mismatch -xc - -o ") + outputFile).c_str(), "w");
         fwrite(output.c_str(), output.size(), 1, fd);
         pclose(fd);
     }
 
-
-    if(showTime){
-        util::logInfo("compile time: ", clock.round());
-    }
-    system("../res/output.out");
-    if(showTime){
-        util::logInfo("run time: ", clock.round());
+    //run
+    if(runProgram){
+        system((std::string("./") + outputFile).c_str());
     }
     return 0;
 }

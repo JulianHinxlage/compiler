@@ -100,10 +100,21 @@ void SemanticChecker::check(std::shared_ptr<Context> context){
         check(e, context);
     }
 
+    bool hasMain = false;
+
     //functions
     for(auto &c : context->contexts){
         if(c->type == Context::FUNCTION){
+            if(c->func.name == "main"){
+                hasMain = true;
+            }
             check(c);
+        }
+    }
+
+    if(context->parentContext == nullptr){
+        if(!hasMain){
+            errors.error("no main function");
         }
     }
 }
