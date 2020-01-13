@@ -3,6 +3,8 @@
 //
 
 #include "Compiler.h"
+#include "SemanticChecker.h"
+#include "CGenerator.h"
 #include "util/math.h"
 
 Compiler::Compiler() {
@@ -12,8 +14,39 @@ Compiler::Compiler() {
 
 void Compiler::compile(const std::string &file) {
     setFile(file);
-    ast = parser.parse(tokenizer);
+    auto newAst = parser.parse(tokenizer);
     tokenizer.setSource("",0);
+
+    if(ast == nullptr){
+        ast = newAst;
+    }else{
+        //fuse ast's
+        for(auto &e : newAst->expressions){
+            ast->expressions.add(e);
+        }
+
+        for(auto &v : newAst->variables){
+            ast->variables.add(v);
+        }
+
+        for(auto &c : newAst->contexts){
+            ast->contexts.add(c);
+        }
+    }
+
+}
+
+std::string &Compiler::generate(bool obfuscate){
+    SemanticChecker semantic;
+    CGenerator generator;
+    if(obfuscate){
+        generator.nameTranslation = true;
+        generator.nameTranslationHex = true;
+    }
+
+    semantic.check(ast);
+    generator.generate(ast, output);
+    return output;
 }
 
 void Compiler::setFile(const std::string &file) {

@@ -10,6 +10,7 @@
 class CGenerator {
 public:
     bool nameTranslation = false;
+    bool nameTranslationHex = false;
     void generate(std::shared_ptr<Context> context,std::string &output);
 private:
     void generateFunction(std::shared_ptr<Context> context,std::string &output, int offset = 0);

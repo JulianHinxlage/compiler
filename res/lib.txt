@@ -1,0 +1,33 @@
+/*
+    library code to test compiler
+*/
+
+int strlen(char *str){
+    int len = 0;
+    while(str[len] != '\0'){
+        len++;
+    }
+    return len;
+}
+
+void print(char *str){
+    syscall(1, 1, str, strlen(str));
+}
+
+void println(char *str){
+    print(str);
+    print("\n");
+}
+
+void printInt(int a){
+    char buf[32];
+    buf[31] = '\0';
+    int i = 30;
+    while(a > 0){
+        char c = (a % 10) + '0';
+        buf[i] = c;
+        a /= 10;
+        i--;
+    }
+    println(&buf[i + 1]);
+}

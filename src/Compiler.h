@@ -16,8 +16,10 @@ public:
 
     Compiler();
     void compile(const std::string &file);
+    std::string &generate(bool obfuscate = false);
 private:
     void setFile(const std::string &file);
+    std::string output;
 };
 
 

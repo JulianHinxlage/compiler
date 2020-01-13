@@ -78,7 +78,10 @@ void CGenerator::generateFunction(std::shared_ptr<Context> context, std::string 
 
     if(context->type == Context::FUNCTION) {
         //function head
+        std::string name = context->func.name;
+        context->func.name = functionName(context);
         generateVariable(context->func, output, offset);
+        context->func.name = name;
         output += "(";
 
         //parameter
@@ -190,7 +193,6 @@ void CGenerator::generateExpression(std::shared_ptr<Context> context, Expression
             break;
         }
         case Expression::CALL:{
-
             auto func = getFunc(context, expression.token.value);
             if(func != nullptr){
                 output += translateName(functionName(func));
@@ -238,16 +240,16 @@ std::string CGenerator::functionName(std::shared_ptr<Context> context) {
         iter = iter->parentContext;
         if(iter->type == Context::FUNCTION){
             if(name.empty()){
-                name = iter->func.name;
+                name = util::replace(iter->func.name, "_", "__");
             }else{
-                name = iter->func.name + "_"  + name;
+                name = util::replace(iter->func.name, "_", "__") + "_"  + name;
             }
         }
     }
     if(name.empty()){
-        name = context->func.name;
+        name = util::replace(context->func.name, "_", "__");
     }else{
-        name = context->func.name + "_"  + name;
+        name = util::replace(context->func.name, "_", "__") + "_"  + name;
     }
     return name;
 }
@@ -280,11 +282,23 @@ std::string CGenerator::translateName(const std::string &name) {
             }
         }
 
-        std::string translation = "x";
-        for(int i = 0; i < 4;i++){
-            translation += "0123456789abcdef"[util::randi(0,15)];
+        if(nameTranslationHex){
+            std::string translation = "x";
+            for(int i = 0; i < 4;i++){
+                translation += "0123456789abcdef"[util::randi(0,15)];
+            }
+            names.add({name, translation});
+            return translation;
+        }else{
+            std::string translation = "";
+            int num = names.size();
+            while(num >= 26){
+                translation += (num % 26) + 'a';
+                num /= 26;
+            }
+            translation += (num % 26) + 'a';
+            names.add({name, translation});
+            return translation;
         }
-        names.add({name, translation});
-        return translation;
     }
 }
