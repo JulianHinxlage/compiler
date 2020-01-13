@@ -19,7 +19,7 @@ void println(char *str){
     print("\n");
 }
 
-void printInt(int a){
+void printInt(long a){
     char buf[32];
     buf[31] = '\0';
     int i = 30;
@@ -29,5 +29,5 @@ void printInt(int a){
         a /= 10;
         i--;
     }
-    println(&buf[i + 1]);
+    print(&buf[i + 1]);
 }

@@ -3,9 +3,9 @@
 //
 
 #include "Parser.h"
-#include "util/log.h"
 #include "util/strutil.h"
 #include "util/math.h"
+#include "Errors.h"
 
 Parser::Parser() {
     tokenizer = nullptr;
@@ -52,7 +52,7 @@ bool Parser::next() {
         token = tokenizer->get();
         if(token.type != "com" && token.type != "sep"){
             if(token.type == "undef"){
-                util::logWarning("unknown symbol \"", token.value, "\" at ", token.line, ":", token.column);
+                errors.error(token, false, "unknown symbol \"", token.value, "\"");
             }else{
                 //util::logInfo("token ", token.type, " ", token.value, " at ", token.line, ":", token.column);
                 tokens.push(token);
@@ -183,14 +183,14 @@ bool Parser::variable(const std::string &endSymbols, bool param) {
                         v.mods += get(1).value;
                         v.mods += "]";
                     }else{
-                        util::logWarning("expected \"]\" at ", token.line, ":", token.column + token.value.size());
+                        errors.error(token, true, "expected \"]\"");
                     }
                 }else{
                     if(check("]")){
                         v.mods += "[";
                         v.mods += "]";
                     }else{
-                        util::logWarning("expected \"]\" at ", token.line, ":", token.column + token.value.size());
+                        errors.error(token, true, "expected \"]\"");
                     }
                 }
             }
@@ -293,7 +293,7 @@ bool Parser::ifelse(Expression &e) {
                     return true;
                 }
             }else{
-                util::logWarning("expected expression at ", token.line, ":", token.column + token.value.size());
+                errors.error(token, true, "expected expression");
             }
             prev();
         }
@@ -344,6 +344,9 @@ bool Parser::factor(Expression &e, bool hasUnary){
                     break;
                 }
             }
+            if(token.value != ")"){
+                errors.error(token, true, "expected \")\"");
+            }
             return postFactor(e);
         }
         if(check("[")){
@@ -352,7 +355,7 @@ bool Parser::factor(Expression &e, bool hasUnary){
 
             Expression e2;
             if(!expression(e2, "]")){
-                util::logWarning("expected \"]\" at ", token.line, ":", token.column + token.value.size());
+                errors.error(token, true, "expected \"]\"");
             }
             e.expressions.add(e2);
             return postFactor(e);
@@ -381,7 +384,7 @@ bool Parser::expression(Expression &e, const std::string &endSymbols) {
             e.expressions.add(e3);
         }
         if(token.value != ")"){
-            util::logWarning("expected \")\" at ", token.line, ":", token.column + token.value.size());
+            errors.error(token, true, "expected \")\"");
         }
     }
 
@@ -405,14 +408,14 @@ bool Parser::expression(Expression &e, const std::string &endSymbols) {
                 e2.token = get(0);
                 e2.type = Expression::OPERATOR;
                 if(!expression(e3, ")")){
-                    util::logWarning("expected \")\" at ", token.line, ":", token.column + token.value.size());
+                    errors.error(token, true, "expected \")\"");
                 }
                 if(token.value != ")"){
-                    util::logWarning("expected \")\" at ", token.line, ":", token.column + token.value.size());
+                    errors.error(token, true, "expected \")\"");
                 }
                 e2.expressions.add(e3);
             }else{
-                util::logWarning("expected expression after ", token.line, ":", token.column + token.value.size());
+                errors.error(token, true, "expected expression");
             }
         }
 
@@ -464,7 +467,7 @@ bool Parser::precedenceParsing(Expression &op){
 
 bool Parser::block() {
     if(!check("{")){
-        util::logWarning("expected \"{\" at ", token.line, ":", token.column + token.value.size());
+        errors.error(token, true, "expected \"{\"");
         contextStepUp();
         prev();//TODO next after failed statement
         return false;
@@ -520,7 +523,7 @@ bool Parser::function() {
             break;
         }
         if(!variable(", )", true)){
-            util::logWarning("expected \")\" at ", token.line, ":", token.column + token.value.size());
+            errors.error(token, true, "expected \")\"");
             contextStepUp();
             return false;
         }
@@ -528,7 +531,7 @@ bool Parser::function() {
     }
 
     if(!check(")")){
-        util::logWarning("expected \")\" at ", token.line, ":", token.column + token.value.size());
+        errors.error(token, true, "expected \")\"");
         contextStepUp();
         return false;
     }
@@ -543,7 +546,7 @@ bool Parser::loop(Expression &e) {
             e = Expression(Expression::KEY_WORD, get(1));
             Expression e2;
             if(!expression(e2, ")")) {
-                util::logWarning("expected \")\" at ", token.line, ":", token.column + token.value.size());
+                errors.error(token, true, "expected \")\"");
             }
             e.expressions.add(e2);
 
@@ -576,7 +579,7 @@ bool Parser::loop(Expression &e) {
                 }
             }else{
                 if(!expression(e2, ";")) {
-                    util::logWarning("expected \";\" at ", token.line, ":", token.column + token.value.size());
+                    errors.error(token, true, "expected \";\"");
                 }
                 e.expressions.add(e2);
             }
@@ -584,13 +587,13 @@ bool Parser::loop(Expression &e) {
 
             e2 = Expression();
             if(!expression(e2, ";")) {
-                util::logWarning("expected \";\" at ", token.line, ":", token.column + token.value.size());
+                errors.error(token, true, "expected \";\"");
             }
             e.expressions.add(e2);
 
             e2 = Expression();
             if(!expression(e2, ")")) {
-                util::logWarning("expected \")\" at ", token.line, ":", token.column + token.value.size());
+                errors.error(token, true, "expected \")\"");
             }
             e.expressions.add(e2);
 

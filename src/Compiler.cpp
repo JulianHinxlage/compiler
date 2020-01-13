@@ -6,6 +6,7 @@
 #include "SemanticChecker.h"
 #include "CGenerator.h"
 #include "util/math.h"
+#include "Errors.h"
 
 Compiler::Compiler() {
     tokenizer.setDefault();
@@ -62,4 +63,5 @@ void Compiler::setFile(const std::string &file) {
         tokenizer.setFile(file, files.size());
         files.add(file);
     }
+    errors.setFile(&files);
 }

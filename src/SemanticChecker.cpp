@@ -3,7 +3,7 @@
 //
 
 #include "SemanticChecker.h"
-#include "util/log.h"
+#include "Errors.h"
 
 Variable *SemanticChecker::getVar(std::shared_ptr<Context> context, const std::string &var){
     for(auto &p : context->parameter){
@@ -50,7 +50,7 @@ void SemanticChecker::check(Expression &e, std::shared_ptr<Context> context) {
     //is variable existing
     if(e.type == Expression::VAR){
         if(getVar(context, e.token.value) == nullptr){
-            util::logWarning("variable ", e.token.value, " is not defined at ", e.token.line, ":", e.token.column);
+            errors.error(e.token, false, "variable ", e.token.value, " is not defined");
         }
     }
 
@@ -59,11 +59,11 @@ void SemanticChecker::check(Expression &e, std::shared_ptr<Context> context) {
         Context *func = getFunc(context, e.token.value);
         if(func == nullptr){
             if(e.token.value != "syscall"){
-                util::logWarning("function ", e.token.value, " is not defined at ", e.token.line, ":", e.token.column);
+                errors.error(e.token, false, "function ", e.token.value, " is not defined");
             }
         }else{
             if(func->parameter.size() != e.expressions.size()){
-                util::logWarning("function ", e.token.value, " takes ", func->parameter.size(), " arguments, but ", e.expressions.size(), " arguments provided at ", e.token.line, ":", e.token.column);
+                errors.error(e.token, false, "function ", e.token.value, " takes ", func->parameter.size(), " arguments, but ", e.expressions.size(), " arguments provided");
             }
         }
     }
@@ -85,12 +85,12 @@ void SemanticChecker::check(std::shared_ptr<Context> context){
         for(int i2 = i1 + 1; i2 < context->variables.size(); i2++) {
             auto &v2 = context->variables[i2];
             if (v1.name == v2.name) {
-                util::logWarning("variable ", v2.name, " at ", v2.location.line, ":", v2.location.column, " is already defined at ", v1.location.line, ":", v1.location.column);
+                errors.error(v2.location, false, "variable ", v2.name, " is already defined at ", v1.location.line, ":", v1.location.column);
             }
         }
         for(auto &v2 : context->parameter) {
             if (v1.name == v2.name) {
-                util::logWarning("variable ", v1.name, " at ", v1.location.line, ":", v1.location.column, " is already defined at ", v2.location.line, ":", v2.location.column);
+                errors.error(v1.location, false, "variable ", v1.name, " is already defined at ", v2.location.line, ":", v2.location.column);
             }
         }
     }

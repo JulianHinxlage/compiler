@@ -116,7 +116,7 @@ Token Tokenizer::get() {
 }
 
 bool Tokenizer::next() {
-    token = Token("","",line,column);
+    token = Token("","",line,column + 1);
     token.file = file;
     if(index >= (int)source.size()){
         return false;
