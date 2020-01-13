@@ -2,8 +2,9 @@
 // Copyright (c) 2020 Julian Hinxlage. All rights reserved.
 //
 
-#include <util/strutil.h>
 #include "CGenerator.h"
+#include "util/strutil.h"
+#include "util/math.h"
 
 void CGenerator::generate(std::shared_ptr<Context> context, std::string &output) {
     output = "#include <unistd.h>\n";
@@ -13,15 +14,38 @@ void CGenerator::generate(std::shared_ptr<Context> context, std::string &output)
         output += v.type;
         output += " ";
         output += v.mods;
-        output += v.name;
+        output += translateName(v.name);
         output += ";\n";
     }
 
     //functions
+    generateFunctionDeclaration(context, output);
     for(auto &f : context->contexts){
         if(f->type == Context::FUNCTION){
             generateFunction(f, output);
         }
+    }
+}
+
+void CGenerator::generateFunctionDeclaration(std::shared_ptr<Context> context, std::string &output, int offset) {
+    for(auto &f : context->contexts){
+        if(f->type == Context::FUNCTION){
+            generateFunctionDeclaration(f, output);
+        }
+    }
+    if(context->type == Context::FUNCTION){
+        //function head
+        generateVariable(context->func, output, offset);
+        output += "(";
+
+        //parameter
+        for (auto &v : context->parameter) {
+            generateVariable(v, output, 0);
+            if (context->parameter.indexOf(v) != context->parameter.size() - 1) {
+                output += ", ";
+            }
+        }
+        output += ");\n";
     }
 }
 
@@ -32,15 +56,15 @@ void CGenerator::generateVariable(Variable &v, std::string &output, int offset) 
     if(util::strContains(v.mods, " ")){
         if(util::split(v.mods).size() == 2){
             output += util::split(v.mods)[0];
-            output += v.name;
+            output += translateName(v.name);
             output += util::split(v.mods)[1];
         }else{
-            output += v.name;
+            output += translateName(v.name);
             output += util::split(v.mods)[0];
         }
     }else{
         output += v.mods;
-        output += v.name;
+        output += translateName(v.name);
     }
 }
 
@@ -169,9 +193,9 @@ void CGenerator::generateExpression(std::shared_ptr<Context> context, Expression
 
             auto func = getFunc(context, expression.token.value);
             if(func != nullptr){
-                output += functionName(func);
+                output += translateName(functionName(func));
             }else{
-                output += expression.token.value;
+                output += translateName(expression.token.value);
             }
             output += "(";
 
@@ -186,7 +210,7 @@ void CGenerator::generateExpression(std::shared_ptr<Context> context, Expression
             break;
         }
         case Expression::VAR:{
-            output += expression.token.value;
+            output += translateName(expression.token.value);
             break;
         }
         case Expression::CONST:{
@@ -240,4 +264,27 @@ std::shared_ptr<Context> CGenerator::getFunc(std::shared_ptr<Context> context, c
         return getFunc(context->parentContext, func);
     }
     return nullptr;
+}
+
+std::string CGenerator::translateName(const std::string &name) {
+    if(!nameTranslation){
+        return name;
+    }else{
+        if(name == "main" || name == "syscall"){
+            return name;
+        }
+
+        for(auto &i : names){
+            if(i.first == name){
+                return i.second;
+            }
+        }
+
+        std::string translation = "x";
+        for(int i = 0; i < 4;i++){
+            translation += "0123456789abcdef"[util::randi(0,15)];
+        }
+        names.add({name, translation});
+        return translation;
+    }
 }

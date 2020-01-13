@@ -10,27 +10,24 @@
 #include "SemanticChecker.h"
 #include "CGenerator.h"
 #include "print.h"
+#include "Compiler.h"
 
 #include <fstream>
 
 int main(int argc, char *argv[]){
     //util::Clock clock;
-    Tokenizer tokenizer;
-    Parser parser;
 
-    tokenizer.setDefault();
-    tokenizer.setFile("../res/code.txt");
+    Compiler compiler;
+    compiler.compile("../res/code.txt");
 
-    auto contextTree = parser.parse(tokenizer);
-
-
-    //printContext(contextTree);
+    //printContext(compiler.ast);
     SemanticChecker semantic;
-    semantic.check(contextTree);
+    semantic.check(compiler.ast);
 
     CGenerator generator;
+    generator.nameTranslation = true;
     std::string output;
-    generator.generate(contextTree, output);
+    generator.generate(compiler.ast, output);
 
     std::ofstream stream("../res/output.c");
     stream << output;
@@ -42,3 +39,4 @@ int main(int argc, char *argv[]){
     //util::logInfo("time: ", clock.elapsed());
     return 0;
 }
+

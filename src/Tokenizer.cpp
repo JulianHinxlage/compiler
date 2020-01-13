@@ -21,6 +21,8 @@ void Tokenizer::reset(){
     line = 1;
     column = 0;
     inEscape = false;
+    types.clear();
+    precedences.clear();
 }
 
 void Tokenizer::setSource(const std::string &source, int file) {
