@@ -8,37 +8,69 @@
 #include "Token.h"
 #include "util/ArrayList.h"
 
+//converts a file or source into a token stream
 class Tokenizer {
 public:
     Tokenizer();
-    void reset();
+
+    //sets the source which is tokenized
+    //the stream is reset
+    //file is the file id tokens refer to
     void setSource(const std::string &source, int file = 0);
+
+    //sets the file which is tokenized
+    //the stream is reset
+    //file is the file id tokens refer to
     void setFile(const std::string &filename, int file = 0);
-    void setToken(const std::string &type, const std::string &value);
-    void setToken(const std::string &type, const util::ArrayList<std::string> &values);
-    void setPrecedence(const std::string &value, int precedence);
-    void setPrecedence(const util::ArrayList<std::string> &values, int precedence);
-    void setDefault();
+
+    //defines a token with type
+    void defineToken(const std::string &type, const std::string &value);
+    void defineToken(const std::string &type, const util::ArrayList<std::string> &values);
+
+    //defines the precedence of a token
+    void definePrecedence(int precedence, const std::string &value);
+    void definePrecedence(int precedence, const util::ArrayList<std::string> &values);
+
+    //defines all tokens and precedence of the default tokenizer
+    void defineDefault();
+
+    //resets all defines
+    void reset();
+
+    //checks if the value is a type
     bool isType(const std::string &type);
+
+    //gets the precedence of a value
     int getPrecedence(const std::string &value);
 
+    //resets stream history
+    //prev calls will fail after call
+    void shrinkStream();
+
+    //gets current token on stream position
     Token get();
+
+    //increments the stream position
     bool next();
 
-private:
-    void check();
-    void checkUndef();
+    //decrements the token position
+    bool prev();
 
-    util::ArrayList<Token> types;
+private:
+    util::ArrayList<Token> tokens;
     util::ArrayList<std::pair<std::string,int>> precedences;
+    util::ArrayList<Token> stream;
+    int streamPosition;
+    Token currentToken;
     std::string source;
-    int index;
-    Token token;
+    int sourceIndex;
+
     int file;
     int line;
     int column;
 
-    bool inEscape;
+    bool tokenizeNext();
+    int checkMatch(const std::string &startPattern, const std::string &pattern, const std::string &endPattern);
 };
 
 

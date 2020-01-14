@@ -6,95 +6,89 @@
 #include "Tokenizer.h"
 
 Tokenizer::Tokenizer() {
-    source = "";
-    index = 0;
-    file = 0;
-    line = 1;
-    column = 0;
-    inEscape = false;
-}
-
-void Tokenizer::reset(){
-    source = "";
-    index = 0;
-    file = 0;
-    line = 1;
-    column = 0;
-    inEscape = false;
-    types.clear();
-    precedences.clear();
+    reset();
 }
 
 void Tokenizer::setSource(const std::string &source, int file) {
     this->source = source;
-    index = 0;
     this->file = file;
+    sourceIndex = 0;
     line = 1;
     column = 0;
-    inEscape = false;
+    stream.clear();
+    streamPosition = -1;
+    currentToken = Token();
 }
 
 void Tokenizer::setFile(const std::string &filename, int file) {
-    this->source = util::readFile(filename);
-    index = 0;
-    this->file = file;
+    setSource(util::readFile(filename), file);
+}
+
+void Tokenizer::defineToken(const std::string &type, const std::string &value) {
+    tokens.add(Token(type, value));
+}
+
+void Tokenizer::defineToken(const std::string &type, const util::ArrayList<std::string> &values) {
+    for(auto &value : values){
+        defineToken(type, value);
+    }
+}
+
+void Tokenizer::definePrecedence(int precedence, const std::string &value) {
+    precedences.add({value, precedence});
+}
+
+void Tokenizer::definePrecedence(int precedence, const util::ArrayList<std::string> &values) {
+    for(auto &value : values){
+        definePrecedence(precedence, value);
+    }
+}
+
+void Tokenizer::defineDefault() {
+    defineToken("type", util::split("void char short int long float double"));
+    defineToken("key", util::split("if else for while return break continue true false class private public protected"));
+    defineToken("op", util::split("+ - * / % | & ^ ~ || && ^^ ! >> <<"));
+    defineToken("aop", util::split("= += -= *= /= %= |= &= ^= ~= ||= &&= ^^= >>= <<="));
+    defineToken("lop", util::split("> < => <= == !="));
+    defineToken("uop", util::split("-- ++"));
+    defineToken("com", util::split("// /* */"));
+    defineToken("pun", util::split(". , ( ) [ ] { } ; : ' \""));
+    defineToken("sep", util::split(" ,\t,\n", ","));
+
+    definePrecedence(1, util::split("++ --"));
+    definePrecedence(2, util::split("! ~"));
+    definePrecedence(3, util::split("* / %"));
+    definePrecedence(4, util::split("+ -"));
+    definePrecedence(5, util::split(">> <<"));
+    definePrecedence(6, util::split("< > <= =>"));
+    definePrecedence(7, util::split("== !="));
+    definePrecedence(8, util::split("&"));
+    definePrecedence(9, util::split("^"));
+    definePrecedence(10, util::split("|"));
+    definePrecedence(11, util::split("&&"));
+    definePrecedence(12, util::split("^^"));
+    definePrecedence(13, util::split("||"));
+    definePrecedence(14, util::split("= += -= *= /= %= >>= <<= &= ^= |= ||= &&= ^^="));
+}
+
+void Tokenizer::reset() {
+    tokens.clear();
+    precedences.clear();
+    stream.clear();
+    streamPosition = -1;
+    currentToken = Token();
+    source = "";
+    sourceIndex = 0;
+    file = 0;
     line = 1;
     column = 0;
-    inEscape = false;
-}
-
-void Tokenizer::setToken(const std::string &type, const std::string &value) {
-    types.add(Token(type,value));
-}
-
-void Tokenizer::setToken(const std::string &type, const util::ArrayList<std::string> &values) {
-    for(auto &value : values){
-        setToken(type, value);
-    }
-}
-
-void Tokenizer::setPrecedence(const std::string &value, int precedence) {
-    precedences.add({value,precedence});
-}
-
-void Tokenizer::setPrecedence(const util::ArrayList<std::string> &values, int precedence) {
-    for(auto &value : values){
-        setPrecedence(value,precedence);
-    }
-}
-
-void Tokenizer::setDefault() {
-    setToken("type", util::split("void char short int long float double"));
-    setToken("key", util::split("if else for while return break continue true false"));
-    setToken("op", util::split("+ - * / % | & ^ ~ || && ^^ ! >> <<"));
-    setToken("aop", util::split("= += -= *= /= %= |= &= ^= ~= ||= &&= ^^= >>= <<="));
-    setToken("lop", util::split("> < => <= == !="));
-    setToken("uop", util::split("-- ++"));
-    setToken("com", util::split("// /* */"));
-    setToken("pun", util::split(". , ( ) [ ] { } ; : ' \""));
-    setToken("sep", util::split(" ,\t,\n", ","));
-
-    setPrecedence(util::split("++ --"),1);
-    setPrecedence(util::split("! ~"),2);
-    setPrecedence(util::split("* / %"),3);
-    setPrecedence(util::split("+ -"),4);
-    setPrecedence(util::split(">> <<"),5);
-    setPrecedence(util::split("< > <= =>"),6);
-    setPrecedence(util::split("== !="),7);
-    setPrecedence(util::split("&"),8);
-    setPrecedence(util::split("^"),9);
-    setPrecedence(util::split("|"),10);
-    setPrecedence(util::split("&&"),11);
-    setPrecedence(util::split("^^"),12);
-    setPrecedence(util::split("||"),13);
-    setPrecedence(util::split("= += -= *= /= %= >>= <<= &= ^= |= ||= &&= ^^="),14);
 }
 
 bool Tokenizer::isType(const std::string &type) {
-    if(util::split("undef str char com num hex bin float ide").contains(type)){
+    if(util::split("ide num char str com hex bin float").contains(type)){
         return true;
     }
-    for(auto &t : types){
+    for(auto &t : tokens){
         if(t.type == type){
             return true;
         }
@@ -103,225 +97,247 @@ bool Tokenizer::isType(const std::string &type) {
 }
 
 int Tokenizer::getPrecedence(const std::string &value) {
-    for(auto &i : precedences){
-        if(i.first == value){
-            return  i.second;
+    for(auto &p : precedences){
+        if(p.first == value){
+            return p.second;
         }
     }
     return -1;
 }
 
+void Tokenizer::shrinkStream() {
+    if(streamPosition == stream.size() - 1){
+        stream.clear();
+        stream.add(currentToken);
+        streamPosition = 0;
+    }else{
+        util::ArrayList<Token> tmp;
+        for(int i = streamPosition;i < stream.size();i++){
+            tmp.add(stream[i]);
+        }
+        stream.swap(tmp);
+        tmp.clear();
+        streamPosition = 0;
+    }
+}
+
 Token Tokenizer::get() {
-    return token;
+    return currentToken;
 }
 
 bool Tokenizer::next() {
-    token = Token("","",line,column + 1);
-    token.file = file;
-    if(index >= (int)source.size()){
-        return false;
+    if(streamPosition < stream.size() - 1){
+        streamPosition++;
+        currentToken = stream[streamPosition];
+        return true;
     }
-    int maxLength = 0;
-    Token found;
+    if(tokenizeNext()){
+        stream.add(currentToken);
+        streamPosition++;
+        return true;
+    }
+    return false;
+}
 
-    for(auto &data : types){
+bool Tokenizer::prev() {
+    if(streamPosition >= 0){
+        streamPosition--;
+        if(streamPosition == -1){
+            currentToken = Token();
+        }else{
+            currentToken = stream[streamPosition];
+        }
+        return true;
+    }
+    return false;
+}
+
+bool Tokenizer::tokenizeNext() {
+    currentToken.file = file;
+    currentToken.line = line;
+    currentToken.column = column + 1;
+
+    //check token match
+    int foundLength = 0;
+    int foundIndex = -1;
+
+    for(auto &token : tokens){
         int i = 0;
-        for(i = 0; i < (int)data.value.size();i++){
-            if(index + i < (int)source.size()){
-                if(source[index + i] == data.value[i]){
+        for(i = 0; i < token.value.size();i++){
+            if(sourceIndex + i < source.size()){
+                if(source[sourceIndex + i] == token.value[i]){
                     continue;
                 }
             }
             break;
         }
-
-        if(i == (int)data.value.size()){
+        if(i == token.value.size()){
             //match
-            if(i > maxLength){
-                maxLength = i;
-                found = data;
+            if(i > foundLength){
+                foundLength = i;
+                foundIndex = tokens.indexOf(token);
             }
         }
     }
 
-    if(maxLength != 0) {
-        token.value = found.value;
-        token.type = found.type;
-    }else {
-        token.type = "undef";
-        token.value = source[index];
-
-        //check for max length undef
-        Token last = token;
-        int i = 0;
-
-        while(true) {
-            checkUndef();
-            if (token.type != "undef") {
-                last = token;
-                token.type = "undef";
-                i++;
-                token.value += source[index + i];
-            }else{
-                break;
-            }
-        }
-
-        token = last;
-        maxLength = token.value.size();
+    if(foundIndex != -1){
+        currentToken.value = tokens[foundIndex].value;
+        currentToken.type = tokens[foundIndex].type;
     }
 
-    //calculate line and column for next token
-    for(int i = 0; i < maxLength;i++){
-        char c = source[index + i];
+    //check for non fixed tokens
+    int size = checkMatch("__azAZ", "__09azAZ", "");
+    if(size > foundLength){
+        foundLength = size;
+        currentToken.type = "ide";
+        currentToken.value = source.substr(sourceIndex, foundLength);
+    }
+
+    size = checkMatch("09", "09", "");
+    if(size > foundLength){
+        foundLength = size;
+        currentToken.type = "num";
+        currentToken.value = source.substr(sourceIndex, foundLength);
+    }
+
+    size = checkMatch("0 x", "09af", "");
+    if(size > foundLength){
+        foundLength = size;
+        currentToken.type = "hex";
+        currentToken.value = source.substr(sourceIndex, foundLength);
+    }
+
+    size = checkMatch("0 b", "01", "");
+    if(size > foundLength){
+        foundLength = size;
+        currentToken.type = "bin";
+        currentToken.value = source.substr(sourceIndex, foundLength);
+    }
+
+    size = checkMatch("09", "09..", "");
+    if(size > foundLength) {
+        if (util::split(source.substr(sourceIndex, size), ".").size() == 2) {
+            foundLength = size;
+            currentToken.type = "float";
+            currentToken.value = source.substr(sourceIndex, foundLength);
+        }
+    }
+
+    size = checkMatch("\'", "*", "\'");
+    if(size > foundLength){
+        foundLength = size;
+        currentToken.type = "char";
+        currentToken.value = source.substr(sourceIndex, foundLength);
+    }
+
+    size = checkMatch("\"", "*", "\"");
+    if(size > foundLength){
+        foundLength = size;
+        currentToken.type = "str";
+        currentToken.value = source.substr(sourceIndex, foundLength);
+    }
+
+    size = checkMatch("/ /", "*", "\n");
+    if(size > foundLength){
+        foundLength = size;
+        currentToken.type = "com";
+        currentToken.value = source.substr(sourceIndex, foundLength);
+    }
+
+    size = checkMatch("/ *", "*", "* /");
+    if(size > foundLength){
+        foundLength = size;
+        currentToken.type = "com";
+        currentToken.value = source.substr(sourceIndex, foundLength);
+    }
+
+    //calculate line and column of next token
+    for(int i = 0; i < foundLength;i++){
+        char c = source[sourceIndex++];
         column++;
         if(c == '\n'){
             line++;
             column = 0;
         }
     }
-    index += maxLength;
-
-    //check for multi token reduction
-    check();
-
+    if(foundLength == 0){
+        //if no match found => undef token
+        if(sourceIndex + 1 < source.size()){
+            currentToken.type = "undef";
+            currentToken.value = "";
+            currentToken.value += source[sourceIndex++];
+            return true;
+        }else{
+            return false;
+        }
+    }
     return true;
 }
 
-bool inRange(char c, char r1, char r2){
-    return c >= r1 && c <= r2;
-}
-
-bool inAnyRange(char c, const std::string &str){
-    if(str.size() % 2 == 1){
+bool checkPattern(char c, const std::string &pattern){
+    if(pattern.size() == 1){
+        return c == pattern[0];
+    }
+    if(pattern.size() % 2 != 0){
         return false;
     }
-    for(int i = 0; i < (int)str.size();i += 2){
-        if(inRange(c,str[i], str[i+1])){
+    for(int i = 0; i < pattern.size();i+=2){
+        if(c >= pattern[i] && c <= pattern[i+1]){
             return true;
         }
     }
     return false;
 }
 
-bool isMatch(const std::string &str, const std::string &range1, const std::string &range2){
-    bool is = true;
-    for(int i = 0; i < (int)str.size();i++) {
-        char c = str[i];
-        if(i == 0){
-            if(!inAnyRange(c, range1)){
-                is = false;
-                break;
-            }
+int Tokenizer::checkMatch(const std::string &startPattern, const std::string &pattern, const std::string &endPattern){
+    //start
+    int index = sourceIndex;
+    for(auto &p : util::split(startPattern)){
+        if(index < source.size() && checkPattern(source[index], p)){
+            index++;
         }else{
-            if(!inAnyRange(c, range2)){
-                is = false;
-                break;
-            }
+            return 0;
         }
     }
-    return is;
-}
 
-void Tokenizer::check() {
-    if(token.value == "\"" && !inEscape){
-        inEscape = true;
-        Token tmp = token;
-        while(next()){
-            tmp.value += get().value;
-            if(get().value == "\""){
+    int counter = 0;
+    while(true) {
+        for (auto &p : util::split(pattern)) {
+            if (p == "*") {
+                if(counter == 0){
+                    break;
+                }
+                index++;
+            } else {
+                if (index < source.size() && checkPattern(source[index], p)) {
+                    index++;
+                } else {
+                    if(endPattern == ""){
+                        return index - sourceIndex;
+                    }else{
+                        return 0;
+                    }
+                }
+            }
+        }
+
+        counter++;
+
+        bool endHit = true;
+        int endHitCount = 0;
+        for (auto &p : util::split(endPattern)) {
+            if (index < source.size() && checkPattern(source[index], p)) {
+                index++;
+                endHitCount++;
+            } else {
+                endHit = false;
                 break;
             }
         }
-        tmp.type = "str";
-        token = tmp;
-        inEscape = false;
-    }else if(token.value == "\'" && !inEscape){
-        inEscape = true;
-        Token tmp = token;
-        while(next()){
-            tmp.value += get().value;
-            if(get().value == "\'"){
-                break;
-            }
-        }
-        tmp.type = "char";
-        token = tmp;
-        inEscape = false;
-    }else if(token.value == "//" && !inEscape){
-        inEscape = true;
-        Token tmp = token;
-        while(next()){
-            tmp.value += get().value;
-            if(get().value == "\n"){
-                break;
-            }
-        }
-        tmp.type = "com";
-        token = tmp;
-        inEscape = false;
-    }else if(token.value == "/*" && !inEscape){
-        inEscape = true;
-        Token tmp = token;
-        while(next()){
-            tmp.value += get().value;
-            if(get().value == "*/"){
-                break;
-            }
-        }
-        tmp.type = "com";
-        token = tmp;
-        inEscape = false;
-    }
-}
-
-void Tokenizer::checkUndef() {
-    if(token.type == "undef"){
-        //identifier
-        if(isMatch(token.value, "__azAZ", "__09azAZ")){
-            token.type = "ide";
-            return;
-        }
-
-        //number(int)
-        if(isMatch(token.value, "09", "09")){
-            token.type = "num";
-
-            if(source[index] == '.'){
-                Token tmp = token;
-                next();
-                tmp.value += get().value;
-                next();
-                tmp.value += get().value;
-                token = tmp;
-                token.type = "undef";
-            }else{
-                return;
-            }
-        }
-
-        //hex
-        if(token.value[0] == '0'){
-            if(isMatch(token.value.substr(1), "xx", "09af")){
-                token.type = "hex";
-                return;
-            }
-        }
-
-        //bin
-        if(token.value[0] == '0'){
-            if(isMatch(token.value.substr(1), "bb", "01")){
-                token.type = "bin";
-                return;
-            }
-        }
-
-        //float
-        if(isMatch(token.value, "09..", "09..")){
-            if(util::split(token.value,".").size() < 3){
-                token.type = "float";
-                return;
-            }
+        if (endHit && endHitCount > 0) {
+            return index - sourceIndex;
+        }else{
+            index -= endHitCount;
         }
     }
 }

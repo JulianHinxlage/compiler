@@ -9,7 +9,7 @@
 #include "Errors.h"
 
 Compiler::Compiler() {
-    tokenizer.setDefault();
+    tokenizer.defineDefault();
     util::rands();
 }
 
